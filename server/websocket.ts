@@ -41,13 +41,27 @@ const gameClients = new Map<number, Set<string>>();
 const gameTimers = new Map<number, NodeJS.Timeout>();
 
 export function setupWebsocketHandlers(wss: WebSocketServer, storage: IStorage) {
-  wss.on("connection", (socket: WebSocket) => {
+  console.log('WebSocket handler setup initialized');
+  
+  wss.on("connection", (socket: WebSocket, request) => {
     // Generate a unique ID for this client
     const clientId = Math.random().toString(36).substring(2, 15);
-    console.log(`Client connected: ${clientId}`);
+    console.log(`Client connected: ${clientId}, URL: ${request.url}`);
+    console.log(`WebSocket connection state: ${socket.readyState}`);
 
     // Store the client connection
     clients.set(clientId, { socket });
+    
+    // Send a welcome message to confirm connection is working
+    try {
+      socket.send(JSON.stringify({
+        type: GameMessageType.GAME_STATE,
+        payload: { message: "Welcome to the game server!" }
+      }));
+      console.log(`Sent welcome message to client ${clientId}`);
+    } catch (error) {
+      console.error(`Failed to send welcome message to client ${clientId}:`, error);
+    }
 
     // Handle messages from clients
     socket.on("message", async (message: string) => {

@@ -8,8 +8,23 @@ import { z } from "zod";
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
   
-  // Create a WebSocket server on a specific path
-  const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
+  // Create a WebSocket server on a specific path and make sure to log connections
+  const wss = new WebSocketServer({ 
+    server: httpServer, 
+    path: '/ws',
+    clientTracking: true  // Enable client tracking
+  });
+  
+  // Log WebSocket server events
+  wss.on('listening', () => {
+    console.log('WebSocket server is listening');
+  });
+  
+  wss.on('error', (error) => {
+    console.error('WebSocket server error:', error);
+  });
+  
+  // Setup WebSocket message handlers
   setupWebsocketHandlers(wss, storage);
 
   // API routes

@@ -88,11 +88,28 @@ export default function Game() {
     }
   };
 
-  // Connect to WebSocket and setup handlers
+  // Connect to WebSocket and setup handlers with improved resilience
   useEffect(() => {
+    // Special case for lobby
+    if (code === 'lobby') {
+      setIsLoading(false);
+      return;
+    }
+    
     // Don't reconnect if we already have a connection
     if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
       return;
+    }
+    
+    // Close any existing socket that's in a broken state
+    if (socketRef.current) {
+      try {
+        if (socketRef.current.readyState !== WebSocket.CLOSED) {
+          socketRef.current.close();
+        }
+      } catch (e) {
+        console.error("Error closing existing socket:", e);
+      }
     }
     
     // Connect to the WebSocket server
@@ -102,14 +119,25 @@ export default function Game() {
     
     console.log("Connecting to WebSocket at:", wsUrl);
     
+    // Set a connection timeout
+    const connectionTimeout = setTimeout(() => {
+      console.error("WebSocket connection timeout");
+      setError("Connection timeout. Please refresh the page.");
+      setIsLoading(false);
+    }, 5000);
+    
     try {
       const socket = new WebSocket(wsUrl);
       socketRef.current = socket;
+      
+      // Store game state when connected so we can restore it if needed
+      let gameStateBackup: any = null;
       
       // WebSocket event handlers
       socket.onopen = () => {
         console.log("WebSocket connected");
         setHasConnected(true);
+        clearTimeout(connectionTimeout);
         
         // If we have a game code, fetch the game data
         if (code && code !== 'lobby') {
@@ -131,13 +159,55 @@ export default function Game() {
         }
       };
       
-      socket.onclose = () => {
-        console.log("WebSocket disconnected");
+      socket.onclose = (event) => {
+        console.log("WebSocket disconnected", event.code, event.reason);
+        
+        // Only attempt reconnection if there was a connection issue, not if it was closed intentionally
+        if (event.code !== 1000) {
+          // Store current game state to maintain continuity
+          gameStateBackup = { ...gameState };
+          
+          // Attempt to reconnect after a short delay
+          setTimeout(() => {
+            console.log("Attempting to reconnect to WebSocket...");
+            if (socketRef.current?.readyState !== WebSocket.OPEN) {
+              // Force recreation of the connection
+              socketRef.current = null;
+              
+              // Connect immediately
+              const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+              const host = window.location.host;
+              const newWsUrl = `${protocol}//${host}/ws`;
+              
+              try {
+                const newSocket = new WebSocket(newWsUrl);
+                socketRef.current = newSocket;
+                
+                newSocket.onopen = () => {
+                  console.log("WebSocket reconnected successfully");
+                  
+                  // If we have a game code, re-fetch game data to restore state
+                  if (code && code !== 'lobby') {
+                    fetchGameData(code);
+                  }
+                };
+                
+                // Re-register all the other event handlers
+                newSocket.onmessage = socket.onmessage;
+                newSocket.onclose = socket.onclose;
+                newSocket.onerror = socket.onerror;
+              } catch (err) {
+                console.error("Failed to reconnect to WebSocket:", err);
+                setError("Connection lost. Please refresh the page.");
+              }
+            }
+          }, 1000);
+        }
       };
       
-      socket.onerror = () => {
-        console.error("WebSocket error occurred");
-        setError("Failed to connect to game server");
+      socket.onerror = (error) => {
+        console.error("WebSocket error occurred:", error);
+        setError("Failed to connect to game server. Please try refreshing the page.");
         setIsLoading(false);
       };
       

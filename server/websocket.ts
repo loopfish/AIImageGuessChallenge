@@ -499,17 +499,28 @@ async function handlePlayerDisconnect(
 // Function to end a round and calculate scores
 async function endRound(gameId: number, storage: IStorage) {
   try {
+    console.log(`Ending round for game ${gameId}`);
+    
     // Get the game
     const game = await storage.getGame(gameId);
-    if (!game || game.status !== "playing") {
+    if (!game) {
+      console.error(`Game ${gameId} not found when ending round`);
+      return;
+    }
+    
+    if (game.status !== "playing") {
+      console.log(`Game ${gameId} is not in 'playing' status, current status: ${game.status}`);
       return;
     }
     
     // Get the current round
     const round = await storage.getCurrentRound(gameId);
     if (!round) {
+      console.error(`No current round found for game ${gameId}`);
       return;
     }
+    
+    console.log(`Found current round ${round.id}, round number ${round.roundNumber} for game ${game.code}`);
     
     // Update round status and end time
     await storage.updateRound(round.id, { 

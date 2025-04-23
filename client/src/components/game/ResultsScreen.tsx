@@ -102,7 +102,10 @@ export default function ResultsScreen() {
   const standings = [...players].sort((a, b) => b.score - a.score);
   
   const handleNextRound = () => {
+    console.log("Next round button clicked");
+    
     if (!socket) {
+      console.error("No socket connection available");
       toast({
         title: "Connection error",
         description: "Not connected to the game server",
@@ -111,27 +114,39 @@ export default function ResultsScreen() {
       return;
     }
     
+    console.log(`Current round: ${game.currentRound}, Total rounds: ${game.totalRounds}`);
+    
     // Check if we've reached the final round
     if (game.currentRound >= game.totalRounds) {
+      console.log("Final round reached, ending game");
       // End the game
-      socket.send(JSON.stringify({
+      const endGameMessage = JSON.stringify({
         type: GameMessageType.END_GAME,
         payload: {
           gameId: game.id
         }
-      }));
+      });
+      console.log("Sending end game message:", endGameMessage);
+      socket.send(endGameMessage);
     } else {
+      console.log("Prompting for next round input");
       // Ask for prompt input for the next round
       const promptInput = window.prompt("Enter prompt for the next round:", "");
+      console.log("User entered prompt:", promptInput);
+      
       if (promptInput && promptInput.trim()) {
         // Start next round
-        socket.send(JSON.stringify({
+        const nextRoundMessage = JSON.stringify({
           type: GameMessageType.NEXT_ROUND,
           payload: {
             gameId: game.id,
             prompt: promptInput
           }
-        }));
+        });
+        console.log("Sending next round message:", nextRoundMessage);
+        socket.send(nextRoundMessage);
+      } else {
+        console.log("User cancelled or entered empty prompt");
       }
     }
   };

@@ -35,7 +35,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
   const handleWebSocketMessage = useCallback((event: MessageEvent) => {
     try {
       const message: WebSocketMessage = JSON.parse(event.data);
-      console.log("WebSocket message received:", message.type);
+      console.log("WebSocket message received:", message.type, message.payload);
       
       switch (message.type) {
         case GameMessageType.GAME_STATE:
@@ -43,11 +43,20 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
           
           // Add current player ID to game state
           if (gameStateData?.players && gameStateData.players.length > 0) {
-            // Find player with same socket ID
+            console.log("Players in game state:", gameStateData.players);
+            
+            // Try to find current player, we'll just use first player for now
+            // This is a simplification - in a real app we'd match based on stored user ID
             const currentPlayer = gameStateData.players[0]; // Fallback to first player
+            
             if (currentPlayer) {
+              console.log("Selected current player:", currentPlayer);
               gameStateData.currentPlayerId = currentPlayer.id;
+            } else {
+              console.warn("No current player could be identified");
             }
+          } else {
+            console.warn("No players found in game state");
           }
           
           setGameState(gameStateData);
@@ -80,9 +89,14 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
           break;
           
         case GameMessageType.ROUND_END:
+          console.log("Round end message received:", message.payload);
           setGameState(prev => {
-            if (!prev) return prev;
-            return {
+            if (!prev) {
+              console.warn("No previous game state when handling ROUND_END");
+              return prev;
+            }
+            
+            const updatedState = {
               ...prev,
               currentRound: message.payload.round,
               roundResults: message.payload.results,
@@ -92,6 +106,9 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
                 status: "round_end"
               }
             };
+            
+            console.log("Updated game state after round end:", updatedState);
+            return updatedState;
           });
           break;
           
@@ -187,20 +204,30 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
         setLoading(true);
         
         // Fetch game data if already in a specific game
-        fetch(`/api/games/${gameCode}/state`)
+        const apiUrl = `/api/games/${gameCode}/state`;
+        console.log("Fetching game state from API:", apiUrl);
+        
+        fetch(apiUrl)
           .then(res => {
+            console.log("API response status:", res.status);
             if (!res.ok) {
               throw new Error(`Game not found: ${res.status}`);
             }
             return res.json();
           })
           .then(data => {
+            console.log("Received game state data:", data);
+            
             // Set game data
             if (data) {
-              setGameState({
+              const gameStateWithPlayer = {
                 ...data,
                 currentPlayerId: data.players[0]?.id // Temporary, will be updated by WebSocket
-              });
+              };
+              console.log("Setting game state with player ID:", gameStateWithPlayer);
+              setGameState(gameStateWithPlayer);
+            } else {
+              console.warn("Received empty game state data");
             }
             setLoading(false);
           })

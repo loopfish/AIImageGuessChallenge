@@ -164,18 +164,43 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
   }, [getCurrentPlayerFromStorage, saveCurrentPlayerToStorage]);
   
   // Attempt reconnection with exponential backoff
+  // Enhanced reconnection logic 
   const attemptReconnect = useCallback(() => {
     if (isReconnecting.current) return;
     
-    if (reconnectAttempts.current >= 5) {
+    if (reconnectAttempts.current >= 10) { // Increased max attempts from 5 to 10
       console.log("Max reconnection attempts reached");
+      setError("Connection lost. Please reload the page.");
       return;
     }
     
     isReconnecting.current = true;
     reconnectAttempts.current++;
     
-    const backoffTime = Math.min(1000 * (2 ** reconnectAttempts.current), 10000);
+    // Store game code for reconnection
+    let currentGameCode = null;
+    if (gameState?.game?.code) {
+      currentGameCode = gameState.game.code;
+      // Save to localStorage as a backup
+      try {
+        localStorage.setItem('lastGameCode', currentGameCode);
+        console.log(`Saved game code for reconnection: ${currentGameCode}`);
+      } catch (err) {
+        console.error("Error saving game code:", err);
+      }
+    } else {
+      // Try to get from localStorage
+      try {
+        currentGameCode = localStorage.getItem('lastGameCode');
+        if (currentGameCode) {
+          console.log(`Retrieved stored game code: ${currentGameCode}`);
+        }
+      } catch (err) {
+        console.error("Error retrieving game code:", err);
+      }
+    }
+    
+    const backoffTime = Math.min(1000 * Math.pow(1.5, reconnectAttempts.current), 10000);
     console.log(`Reconnecting in ${backoffTime}ms (attempt ${reconnectAttempts.current})`);
     
     if (reconnectTimer.current) {
@@ -184,9 +209,45 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     
     reconnectTimer.current = setTimeout(() => {
       console.log(`Attempting reconnection #${reconnectAttempts.current}`);
-      connectWebSocket().finally(() => {
-        isReconnecting.current = false;
-      });
+      connectWebSocket()
+        .then(socket => {
+          console.log("Reconnected successfully!");
+          // Reset attempts on success
+          reconnectAttempts.current = 0;
+          
+          // If we have a game code, send a reconnect message
+          if (currentGameCode) {
+            console.log(`Rejoining game: ${currentGameCode}`);
+            
+            // Wait a moment for the connection to stabilize
+            setTimeout(() => {
+              if (socket.readyState === WebSocket.OPEN) {
+                try {
+                  const reconnectMsg = {
+                    type: GameMessageType.RECONNECT_REQUEST,
+                    payload: {
+                      gameCode: currentGameCode,
+                      playerId: getCurrentPlayerFromStorage()
+                    }
+                  };
+                  socket.send(JSON.stringify(reconnectMsg));
+                } catch (err) {
+                  console.error("Error sending reconnect message:", err);
+                }
+              }
+            }, 500);
+          }
+        })
+        .catch(err => {
+          console.error("Reconnection failed:", err);
+          // Try again if we haven't reached max attempts
+          if (reconnectAttempts.current < 10) {
+            attemptReconnect();
+          }
+        })
+        .finally(() => {
+          isReconnecting.current = false;
+        });
     }, backoffTime);
   }, []);
   

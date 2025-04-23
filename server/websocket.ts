@@ -250,12 +250,16 @@ async function handleJoinGame(
 async function handleStartGame(message: StartGameMessage, storage: IStorage) {
   try {
     const { gameId, prompt } = message.payload;
+    console.log(`Starting game ${gameId} with prompt: "${prompt}"`);
     
     // Get the game
     const game = await storage.getGame(gameId);
     if (!game) {
+      console.error(`Game ${gameId} not found`);
       throw new Error("Game not found");
     }
+    
+    console.log(`Game found: ${game.code}, status: ${game.status}`);
     
     // Generate image from Gemini API
     const imageUrl = await generateImage(prompt);
@@ -370,15 +374,20 @@ async function handleSubmitGuess(message: SubmitGuessMessage, storage: IStorage)
 async function handleNextRound(message: NextRoundMessage, storage: IStorage) {
   try {
     const { gameId, prompt } = message.payload;
+    console.log(`Starting next round for game ${gameId} with prompt: "${prompt}"`);
     
     // Get the game
     const game = await storage.getGame(gameId);
     if (!game) {
+      console.error(`Game ${gameId} not found for next round`);
       throw new Error("Game not found");
     }
     
+    console.log(`Current round ${game.currentRound}, total rounds ${game.totalRounds}`);
+    
     // Check if we've reached max rounds
     if (game.currentRound >= game.totalRounds) {
+      console.log(`Reached maximum rounds (${game.totalRounds}), ending game`);
       await handleEndGame(gameId, storage);
       return;
     }
@@ -726,12 +735,13 @@ function sendToGame(gameId: number, message: WebSocketMessage) {
   
   const messageString = JSON.stringify(message);
   
-  for (const clientId of gameSet) {
+  // Convert Set to Array before iterating
+  Array.from(gameSet).forEach(clientId => {
     const client = clients.get(clientId);
     if (client && client.socket.readyState === WebSocket.OPEN) {
       client.socket.send(messageString);
     }
-  }
+  });
 }
 
 // Send error message to a specific client
@@ -755,7 +765,9 @@ function sendErrorToGameClients(gameId: number, errorMessage: string) {
 
 // Find clientId by playerId
 function findClientIdByPlayerId(playerId: number): string | undefined {
-  for (const [clientId, client] of clients.entries()) {
+  // Convert Map.entries() to Array before iterating
+  const clientEntries = Array.from(clients.entries());
+  for (const [clientId, client] of clientEntries) {
     if (client.playerId === playerId) {
       return clientId;
     }

@@ -20,9 +20,17 @@ export default function ResultsScreen() {
     return <div>Loading results...</div>;
   }
   
-  const isHost = gameState.players?.some(p => 
-    p.isHost && p.id === gameState.currentPlayerId
-  );
+  // Determine if current player is the host
+  const isHost = gameState.players?.some(p => {
+    if (p.isHost && p.id === gameState.currentPlayerId) {
+      console.log("Current player is the host", p);
+      return true;
+    }
+    return false;
+  });
+  
+  console.log("Current player ID:", gameState.currentPlayerId);
+  console.log("Is host:", isHost);
   
   const game = gameState.game;
   const currentRound = gameState.currentRound;
@@ -114,14 +122,14 @@ export default function ResultsScreen() {
       }));
     } else {
       // Ask for prompt input for the next round
-      const prompt = prompt("Enter prompt for the next round:", "");
-      if (prompt && prompt.trim()) {
+      const promptInput = window.prompt("Enter prompt for the next round:", "");
+      if (promptInput && promptInput.trim()) {
         // Start next round
         socket.send(JSON.stringify({
           type: GameMessageType.NEXT_ROUND,
           payload: {
             gameId: game.id,
-            prompt: prompt
+            prompt: promptInput
           }
         }));
       }

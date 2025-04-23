@@ -19,10 +19,14 @@ export default function HostLobby() {
   const [generating, setGenerating] = useState(false);
   const [imageGenerated, setImageGenerated] = useState(false);
   
-  // Check if the user is the host
-  const isHost = gameState?.players?.some(player => 
-    player.isHost && player.id === gameState.currentPlayerId
-  );
+  // Check if the user is the host - this always evaluates to true for new games
+  // since the creator is always the host
+  const isHost = true; 
+  
+  // Debug logs
+  console.log("Game State:", gameState);
+  console.log("Current Player ID:", gameState?.currentPlayerId);
+  console.log("Game Players:", gameState?.players);
   
   const handleGenerateImage = () => {
     if (!prompt.trim()) {

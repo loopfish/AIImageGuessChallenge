@@ -40,6 +40,8 @@ const gameClients = new Map<number, Set<string>>();
 // Map of games with active timers
 const gameTimers = new Map<number, NodeJS.Timeout>();
 
+// Use the reconnection types from the shared schema
+
 export function setupWebsocketHandlers(wss: WebSocketServer, storage: IStorage) {
   console.log('WebSocket handler setup initialized');
   
@@ -100,6 +102,11 @@ export function setupWebsocketHandlers(wss: WebSocketServer, storage: IStorage) 
             
           case GameMessageType.END_GAME:
             await handleEndGame(parsedMessage.payload.gameId, storage);
+            break;
+            
+          // Handle player reconnection request
+          case GameMessageType.RECONNECT_REQUEST:
+            await handlePlayerReconnect(clientId, parsedMessage.payload, storage);
             break;
         }
       } catch (error) {
@@ -803,6 +810,88 @@ function sendErrorToGameClients(gameId: number, errorMessage: string) {
     type: GameMessageType.GAME_ERROR,
     payload: { message: errorMessage }
   });
+}
+
+// Handle player reconnection request
+async function handlePlayerReconnect(clientId: string, payload: any, storage: IStorage) {
+  try {
+    const { playerId, gameId } = payload;
+    console.log(`Reconnection request from client ${clientId} for player ${playerId} in game ${gameId}`);
+    
+    if (!playerId || !gameId) {
+      console.error("Invalid reconnection request - missing playerId or gameId");
+      return sendErrorToClient(clientId, "Invalid reconnection request. Missing player or game ID.");
+    }
+    
+    // Verify the player exists
+    const player = await storage.getPlayer(playerId);
+    if (!player) {
+      console.error(`Player ${playerId} not found during reconnection attempt`);
+      return sendErrorToClient(clientId, "Player not found. Please rejoin the game.");
+    }
+    
+    // Verify the game exists
+    const game = await storage.getGame(gameId);
+    if (!game) {
+      console.error(`Game ${gameId} not found during reconnection attempt`);
+      return sendErrorToClient(clientId, "Game not found. Please create a new game.");
+    }
+    
+    console.log(`Reconnecting player ${player.username} (${playerId}) to game ${game.code} (${gameId})`);
+    
+    // Update player to active if needed
+    if (!player.isActive) {
+      await storage.updatePlayer(playerId, { isActive: true });
+    }
+    
+    // Store client association with game and player
+    const client = clients.get(clientId);
+    if (client) {
+      client.gameId = gameId;
+      client.playerId = playerId;
+    }
+    
+    // Add client to game clients map
+    let gameSet = gameClients.get(gameId);
+    if (!gameSet) {
+      gameSet = new Set<string>();
+      gameClients.set(gameId, gameSet);
+    }
+    gameSet.add(clientId);
+    
+    // Send success response
+    const reconnectedClient = clients.get(clientId);
+    if (reconnectedClient && reconnectedClient.socket.readyState === WebSocket.OPEN) {
+      reconnectedClient.socket.send(JSON.stringify({
+        type: ReconnectType.SUCCESS,
+        payload: { 
+          message: "Reconnection successful",
+          playerId,
+          gameId
+        }
+      }));
+    }
+    
+    // Send complete game state to the reconnected client
+    sendGameStateToClient(clientId, gameId, storage);
+    
+    console.log(`Player ${player.username} successfully reconnected to game ${game.code}`);
+  } catch (error) {
+    console.error("Error handling player reconnect:", error);
+    sendErrorToClient(clientId, "Failed to reconnect. Please try joining again.");
+    
+    // Send failure response
+    const client = clients.get(clientId);
+    if (client && client.socket.readyState === WebSocket.OPEN) {
+      client.socket.send(JSON.stringify({
+        type: ReconnectType.FAILURE,
+        payload: { 
+          message: "Reconnection failed",
+          error: (error as Error).message
+        }
+      }));
+    }
+  }
 }
 
 // Find clientId by playerId

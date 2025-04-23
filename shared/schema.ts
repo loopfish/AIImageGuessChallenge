@@ -106,6 +106,11 @@ export enum GameMessageType {
   GAME_ERROR = "game_error",
   PLAYER_GUESS = "player_guess",
   TIMER_UPDATE = "timer_update",
+  
+  // Reconnection message types
+  RECONNECT_REQUEST = "reconnect_request",
+  RECONNECT_SUCCESS = "reconnect_success",
+  RECONNECT_FAILURE = "reconnect_failure",
 }
 
 // Types

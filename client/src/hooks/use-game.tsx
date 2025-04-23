@@ -242,7 +242,13 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
         socket.onclose = (event) => {
           console.log(`WebSocket closed: ${event.code} ${event.reason}`);
           setIsConnected(false);
-          socketRef.current = null;
+          
+          // Don't set socketRef to null, just mark it as closed
+          // We'll keep the reference for reconnection
+          // socketRef.current = null;
+          
+          // Preserve the game state during reconnection
+          console.log("Preserving game state during reconnection");
           
           if (!event.wasClean) {
             console.log("Connection was not closed cleanly, attempting to reconnect");
@@ -374,6 +380,41 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
       hasFetchedRef.current = false;
     }
   }, [location, gameCode]);
+  
+  // Prevent unnecessary WebSocket reconnections
+  useEffect(() => {
+    // This will stabilize the connection once we have game data
+    if (gameState?.game && socketRef.current && isConnected) {
+      console.log("Stable connection established with game data");
+      
+      // Create a reference to the current socket to avoid TypeScript errors
+      const socket = socketRef.current;
+      
+      // Add a more robust error handler to the socket
+      const existingOnError = socket.onerror;
+      socket.onerror = (event) => {
+        console.error("WebSocket error in stable connection:", event);
+        if (existingOnError && typeof existingOnError === 'function') {
+          // Direct call without .call to avoid TS errors
+          existingOnError(event);
+        }
+      };
+      
+      // Override the close handler to prevent auto-disconnect
+      const existingOnClose = socket.onclose;
+      socket.onclose = (event) => {
+        console.warn("WebSocket closed in stable connection:", event);
+        // Only attempt reconnect if it wasn't a clean closure
+        if (!event.wasClean) {
+          attemptReconnect();
+        }
+        if (existingOnClose && typeof existingOnClose === 'function') {
+          // Direct call without .call to avoid TS errors
+          existingOnClose(event);
+        }
+      };
+    }
+  }, [gameState?.game, isConnected, attemptReconnect]);
   
   // Create context value
   const value: GameContextType = {

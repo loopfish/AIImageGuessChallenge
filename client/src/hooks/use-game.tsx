@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode, useMemo } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode, useMemo, useRef } from "react";
 import { useWebSocket } from "./use-websocket";
 import { GameState, WebSocketMessage, GameMessageType } from "@shared/schema";
 import { useLocation } from "wouter";
@@ -200,6 +200,42 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     }
   }, [getCurrentPlayerFromStorage, saveCurrentPlayerToStorage]);
   
+  // Track whether we should attempt reconnection
+  const shouldAttemptReconnect = useRef(false);
+  
+  // Store the reconnection info for use after socket is available
+  const pendingReconnectInfo = useRef<{playerId: number, gameId: number} | null>(null);
+  
+  // Handle WebSocket connection open event
+  const handleWebSocketOpen = useCallback((event: Event) => {
+    // Only attempt to restore game state if needed
+    if (shouldAttemptReconnect.current) {
+      const playerId = getCurrentPlayerFromStorage();
+      
+      // Get gameId from localStorage to avoid dependency on gameState
+      let gameId: number | null = null;
+      try {
+        const storedGameId = localStorage.getItem('currentGameId');
+        if (storedGameId) {
+          gameId = parseInt(storedGameId, 10);
+        } else if (gameState?.game?.id) {
+          // Fall back to game state if available
+          gameId = gameState.game.id;
+          // Save for future reconnects
+          localStorage.setItem('currentGameId', gameId.toString());
+        }
+      } catch (err) {
+        console.error("Error reading game ID from storage:", err);
+      }
+      
+      if (playerId && gameId) {
+        console.log(`Storing reconnection info for player ${playerId} to game ${gameId}`);
+        pendingReconnectInfo.current = { playerId, gameId };
+        shouldAttemptReconnect.current = false;
+      }
+    }
+  }, [getCurrentPlayerFromStorage, gameState]);
+
   // Setup WebSocket connection with the memoized handler
   const { 
     socket, 
@@ -209,23 +245,16 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
   } = useWebSocket({
     autoConnect: false,
     onMessage: handleWebSocketMessage,
+    onOpen: handleWebSocketOpen,
     reconnectAttempts: 5,
     reconnectInterval: 3000,
-    onOpen: () => {
-      // When connection opens (including reconnects), attempt to restore game state
-      const playerId = getCurrentPlayerFromStorage();
-      const gameId = gameState?.game?.id;
-      
-      // If we have both a player ID and game ID stored, send a reconnect request
-      if (playerId && gameId && socket) {
-        console.log(`Attempting to reconnect player ${playerId} to game ${gameId}`);
-        
-        // Send reconnect request to server
-        socket.send(JSON.stringify({
-          type: GameMessageType.RECONNECT_REQUEST,
-          payload: { playerId, gameId }
-        }));
-      }
+    onClose: () => {
+      console.log("WebSocket closed, setting reconnect flag");
+      shouldAttemptReconnect.current = true;
+    },
+    onError: () => {
+      console.log("WebSocket error, setting reconnect flag");
+      shouldAttemptReconnect.current = true;
     }
   });
   
@@ -264,6 +293,22 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
       setError(wsError.message);
     }
   }, [wsError]);
+  
+  // Handle reconnection once socket is available
+  useEffect(() => {
+    if (isConnected && socket && pendingReconnectInfo.current) {
+      const { playerId, gameId } = pendingReconnectInfo.current;
+      console.log(`Sending reconnection request for player ${playerId} to game ${gameId}`);
+      
+      socket.send(JSON.stringify({
+        type: GameMessageType.RECONNECT_REQUEST,
+        payload: { playerId, gameId }
+      }));
+      
+      // Clear the pending reconnect info after sending
+      pendingReconnectInfo.current = null;
+    }
+  }, [isConnected, socket]);
   
   // If on game page, fetch initial game state when connected
   useEffect(() => {

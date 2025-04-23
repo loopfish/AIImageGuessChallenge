@@ -30,18 +30,17 @@ export default function Home() {
       return;
     }
     
-    // Make sure we're connected to WebSocket
-    if (!socket) {
-      await connectWebSocket();
-    }
-    
     setIsCreating(true);
     
     try {
-      const updatedSocket = await connectWebSocket();
+      // Connect to WebSocket if not already connected
+      let currentSocket = socket;
+      if (!currentSocket) {
+        currentSocket = await connectWebSocket();
+      }
       
       // Create the game via WebSocket
-      updatedSocket.send(JSON.stringify({
+      currentSocket.send(JSON.stringify({
         type: GameMessageType.CREATE_GAME,
         payload: {
           username,

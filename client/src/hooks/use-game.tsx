@@ -143,22 +143,28 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
   // Connect to WebSocket
   const connectWebSocket = useCallback(async () => {
     try {
+      // If we're already connected, return the existing socket
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        return socket;
+      }
+      
       setLoading(true);
       setError(null);
       
       // Connect to the WebSocket server
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       const wsUrl = `${protocol}//${window.location.host}/ws`;
-      const socket = await connect(wsUrl);
+      console.log("Connecting to WebSocket at:", wsUrl);
       
-      return socket;
+      const newSocket = await connect(wsUrl);
+      return newSocket;
     } catch (error) {
       console.error("Failed to connect to WebSocket:", error);
       setError("Failed to connect to game server");
       setLoading(false);
       throw error;
     }
-  }, [connect]);
+  }, [connect, socket]);
   
   // Set websocket error
   useEffect(() => {
@@ -169,30 +175,36 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
   
   // If on game page, fetch initial game state when connected
   useEffect(() => {
-    if (isConnected && socket && location.startsWith('/game/') && gameCode && gameCode !== 'lobby') {
-      // Fetch game data if already in a game
-      fetch(`/api/games/${gameCode}/state`)
-        .then(res => {
-          if (!res.ok) {
-            throw new Error(`Game not found: ${res.status}`);
-          }
-          return res.json();
-        })
-        .then(data => {
-          // Set game data
-          if (data) {
-            setGameState({
-              ...data,
-              currentPlayerId: data.players[0]?.id // Temporary, will be updated by WebSocket
-            });
-          }
-          setLoading(false);
-        })
-        .catch(err => {
-          console.error("Error fetching game:", err);
-          setError(err.message);
-          setLoading(false);
-        });
+    // Only execute if we have a socket connection and we're on a game page
+    if (isConnected && socket && location.startsWith('/game/')) {
+      // Extract gameCode from URL, only make the API call on specific game pages
+      if (gameCode && gameCode !== 'lobby') {
+        setLoading(true);
+        
+        // Fetch game data if already in a specific game
+        fetch(`/api/games/${gameCode}/state`)
+          .then(res => {
+            if (!res.ok) {
+              throw new Error(`Game not found: ${res.status}`);
+            }
+            return res.json();
+          })
+          .then(data => {
+            // Set game data
+            if (data) {
+              setGameState({
+                ...data,
+                currentPlayerId: data.players[0]?.id // Temporary, will be updated by WebSocket
+              });
+            }
+            setLoading(false);
+          })
+          .catch(err => {
+            console.error("Error fetching game:", err);
+            setError(err.message);
+            setLoading(false);
+          });
+      }
     } else if (location === '/') {
       // On home page, not in a game
       setLoading(false);

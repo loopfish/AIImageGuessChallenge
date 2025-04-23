@@ -1,5 +1,4 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode, useMemo, useRef } from "react";
-import { useWebSocket } from "./use-websocket";
 import { GameState, WebSocketMessage, GameMessageType } from "@shared/schema";
 import { useLocation } from "wouter";
 
@@ -23,18 +22,27 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [gameState, setGameState] = useState<GameState | null>(null);
+  const [isConnected, setIsConnected] = useState(false);
   const [location] = useLocation();
   
-  // Track whether we need to fetch game data
-  const hasInitiallyFetched = useRef(false);
+  // Store/track WebSocket instance using a ref to avoid re-renders
+  const socketRef = useRef<WebSocket | null>(null);
   
-  // Get URL info for game code
+  // Track if first fetch has been done
+  const hasFetchedRef = useRef(false);
+  
+  // Track reconnection attempts
+  const reconnectAttempts = useRef(0);
+  const reconnectTimer = useRef<NodeJS.Timeout | null>(null);
+  const isReconnecting = useRef(false);
+  
+  // Extract game code from URL
   const gameCode = useMemo(() => {
     const urlParts = location.split('/');
     return urlParts[urlParts.length - 1];
   }, [location]);
   
-  // Store/retrieve player data in localStorage
+  // Local storage helpers
   const saveCurrentPlayerToStorage = useCallback((playerId: number) => {
     try {
       localStorage.setItem('currentPlayerId', playerId.toString());
@@ -56,11 +64,11 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     return null;
   }, []);
   
-  // Handle WebSocket messages
+  // WebSocket message handler
   const handleWebSocketMessage = useCallback((event: MessageEvent) => {
     try {
       const message: WebSocketMessage = JSON.parse(event.data);
-      console.log("WebSocket message:", message.type);
+      console.log("WebSocket message received:", message.type);
       
       switch (message.type) {
         case GameMessageType.GAME_STATE:
@@ -150,147 +158,208 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     }
   }, [getCurrentPlayerFromStorage, saveCurrentPlayerToStorage]);
   
-  // Simple WebSocket setup with no dependencies on socket or isConnected
-  const { 
-    socket, 
-    isConnected, 
-    connect,
-    error: wsError 
-  } = useWebSocket({
-    autoConnect: false,
-    onMessage: handleWebSocketMessage,
-    reconnectAttempts: 5,
-    reconnectInterval: 3000
-  });
+  // Attempt reconnection with exponential backoff
+  const attemptReconnect = useCallback(() => {
+    if (isReconnecting.current) return;
+    
+    if (reconnectAttempts.current >= 5) {
+      console.log("Max reconnection attempts reached");
+      return;
+    }
+    
+    isReconnecting.current = true;
+    reconnectAttempts.current++;
+    
+    const backoffTime = Math.min(1000 * (2 ** reconnectAttempts.current), 10000);
+    console.log(`Reconnecting in ${backoffTime}ms (attempt ${reconnectAttempts.current})`);
+    
+    if (reconnectTimer.current) {
+      clearTimeout(reconnectTimer.current);
+    }
+    
+    reconnectTimer.current = setTimeout(() => {
+      console.log(`Attempting reconnection #${reconnectAttempts.current}`);
+      connectWebSocket().finally(() => {
+        isReconnecting.current = false;
+      });
+    }, backoffTime);
+  }, []);
   
-  // Connect to WebSocket
-  const connectWebSocket = useCallback(async () => {
-    try {
-      if (socket && socket.readyState === WebSocket.OPEN) {
-        return socket;
+  // WebSocket connection function
+  const connectWebSocket = useCallback(async (): Promise<WebSocket> => {
+    // If already connected, return the existing socket
+    if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+      return socketRef.current;
+    }
+    
+    // Close any existing socket
+    if (socketRef.current) {
+      socketRef.current.close();
+      socketRef.current = null;
+    }
+    
+    setLoading(true);
+    setError(null);
+    
+    return new Promise<WebSocket>((resolve, reject) => {
+      try {
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const host = window.location.host;
+        const wsUrl = `${protocol}//${host}/ws`;
+        
+        console.log("Connecting to WebSocket at:", wsUrl);
+        
+        const socket = new WebSocket(wsUrl);
+        socketRef.current = socket;
+        
+        socket.onopen = (event) => {
+          console.log("WebSocket connected!");
+          setIsConnected(true);
+          reconnectAttempts.current = 0; // Reset reconnect attempts on successful connection
+          
+          // When in a game, send initial reconnection request
+          if (location.startsWith('/game/') && gameCode && gameCode !== 'lobby') {
+            const playerId = getCurrentPlayerFromStorage();
+            if (playerId) {
+              console.log(`Sending reconnection request for player ${playerId}`);
+              socket.send(JSON.stringify({
+                type: GameMessageType.RECONNECT_REQUEST,
+                payload: { playerId }
+              }));
+            }
+          }
+          
+          resolve(socket);
+        };
+        
+        socket.onmessage = handleWebSocketMessage;
+        
+        socket.onclose = (event) => {
+          console.log(`WebSocket closed: ${event.code} ${event.reason}`);
+          setIsConnected(false);
+          socketRef.current = null;
+          
+          if (!event.wasClean) {
+            console.log("Connection was not closed cleanly, attempting to reconnect");
+            attemptReconnect();
+          }
+        };
+        
+        socket.onerror = (event) => {
+          console.error("WebSocket error:", event);
+          setError("Connection error");
+          reject(new Error("WebSocket connection error"));
+        };
+      } catch (error) {
+        console.error("Failed to create WebSocket:", error);
+        setError("Failed to connect");
+        reject(error);
+      }
+    });
+  }, [location, gameCode, handleWebSocketMessage, getCurrentPlayerFromStorage, attemptReconnect]);
+  
+  // Auto-connect on mount (just once)
+  useEffect(() => {
+    const connect = async () => {
+      try {
+        await connectWebSocket();
+      } catch (err) {
+        console.error("Initial connection failed:", err);
+      }
+    };
+    
+    connect();
+    
+    // Cleanup on unmount
+    return () => {
+      if (socketRef.current) {
+        socketRef.current.close();
+        socketRef.current = null;
       }
       
-      setLoading(true);
-      setError(null);
-      
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const host = window.location.host;
-      const wsUrl = `${protocol}//${host}/ws`;
-      console.log("Connecting to WebSocket at:", wsUrl);
-      
-      return await connect(wsUrl);
-    } catch (error) {
-      console.error("Connection failed:", error);
-      setError("Failed to connect to game server");
-      setLoading(false);
-      throw error;
-    }
-  }, [connect, socket]);
+      if (reconnectTimer.current) {
+        clearTimeout(reconnectTimer.current);
+      }
+    };
+  }, []);
   
-  // Handle WebSocket errors
+  // Fetch game data when on a game page and connected
   useEffect(() => {
-    if (wsError) {
-      setError(wsError.message);
-    }
-  }, [wsError]);
-  
-  // Fetch game state when on a game page
-  useEffect(() => {
-    // Only run once for the combination of socket + game code
-    const shouldFetchData = isConnected && 
-      socket && 
+    // Only run once when we're connected and on a game page that's not the lobby
+    const shouldFetchData = 
+      isConnected && 
       location.startsWith('/game/') && 
       gameCode && 
       gameCode !== 'lobby' && 
-      !hasInitiallyFetched.current;
+      !hasFetchedRef.current;
       
     if (shouldFetchData) {
-      hasInitiallyFetched.current = true;
-      setLoading(true);
+      hasFetchedRef.current = true;
+      console.log(`Fetching game data for code: ${gameCode}`);
       
-      const apiUrl = `/api/games/${gameCode}/state`;
-      console.log("Fetching game state:", apiUrl);
-      
-      fetch(apiUrl)
-        .then(res => {
-          if (!res.ok) throw new Error(`Game not found: ${res.status}`);
-          return res.json();
-        })
-        .then(data => {
-          if (data) {
+      const fetchGameData = async () => {
+        try {
+          setLoading(true);
+          
+          const apiUrl = `/api/games/${gameCode}/state`;
+          const response = await fetch(apiUrl);
+          
+          if (!response.ok) {
+            throw new Error(`Game not found: ${response.status}`);
+          }
+          
+          const data = await response.json();
+          
+          // Process player info
+          let currentPlayerId = null;
+          if (data.players && data.players.length > 0) {
             const savedPlayerId = getCurrentPlayerFromStorage();
-            let currentPlayerId;
             
-            if (savedPlayerId && data.players) {
-              const existingPlayer = data.players.find((p: any) => p.id === savedPlayerId);
+            // First check if the saved player ID is valid for this game
+            if (savedPlayerId) {
+              const existingPlayer = data.players.find(p => p.id === savedPlayerId);
               if (existingPlayer) {
                 currentPlayerId = existingPlayer.id;
               }
             }
             
-            if (!currentPlayerId && data.players && data.players.length > 0) {
-              currentPlayerId = data.players[0]?.id;
-              if (currentPlayerId) saveCurrentPlayerToStorage(currentPlayerId);
+            // If no valid saved player ID, use the first player
+            if (!currentPlayerId) {
+              currentPlayerId = data.players[0].id;
+              saveCurrentPlayerToStorage(currentPlayerId);
             }
-            
-            setGameState({ ...data, currentPlayerId });
           }
+          
+          // Update game state
+          setGameState({
+            ...data,
+            currentPlayerId
+          });
+        } catch (err) {
+          console.error("Error fetching game data:", err);
+          setError(err instanceof Error ? err.message : "Failed to load game");
+        } finally {
           setLoading(false);
-        })
-        .catch(err => {
-          console.error("Error:", err);
-          setError(err.message);
-          setLoading(false);
-        });
-    } else if (location === '/') {
-      // On home page, not in a game
-      setLoading(false);
+        }
+      };
+      
+      fetchGameData();
     }
-  }, [isConnected, socket, location, gameCode, getCurrentPlayerFromStorage, saveCurrentPlayerToStorage]);
+  }, [isConnected, location, gameCode, getCurrentPlayerFromStorage, saveCurrentPlayerToStorage]);
   
-  // Check for reconnection on location change
+  // Reset fetch flag on location change
   useEffect(() => {
-    if (location.startsWith('/game/') && gameCode !== 'lobby') {
-      hasInitiallyFetched.current = false; // Reset to allow fetching on new game
+    if (location === '/' || (location.startsWith('/game/') && gameCode === 'lobby')) {
+      hasFetchedRef.current = false;
     }
   }, [location, gameCode]);
   
-  // Track if we've already sent a reconnection request
-  const hasAttemptedReconnection = useRef(false);
-  
-  // Send reconnection request when needed (only once)
-  useEffect(() => {
-    // Only attempt reconnection once when socket is connected
-    if (isConnected && socket && !hasAttemptedReconnection.current) {
-      hasAttemptedReconnection.current = true;
-      
-      const playerId = getCurrentPlayerFromStorage();
-      let gameId = null;
-      
-      try {
-        const storedGameId = localStorage.getItem('currentGameId');
-        if (storedGameId) {
-          gameId = parseInt(storedGameId, 10);
-        }
-      } catch (err) {
-        console.error("Error reading game ID:", err);
-      }
-      
-      if (playerId && gameId) {
-        console.log(`Attempting reconnection: player ${playerId}, game ${gameId}`);
-        socket.send(JSON.stringify({
-          type: GameMessageType.RECONNECT_REQUEST,
-          payload: { playerId, gameId }
-        }));
-      }
-    }
-  }, [isConnected, socket, getCurrentPlayerFromStorage]);
-  
-  const value = {
+  // Create context value
+  const value: GameContextType = {
     gameState,
     loading,
     error,
-    socket,
+    socket: socketRef.current,
     isConnected,
     connectWebSocket,
     setGameState

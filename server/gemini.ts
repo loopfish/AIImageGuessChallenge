@@ -1,12 +1,12 @@
 import fetch from "node-fetch";
 
-// Google Gemini API URL for text generation
-const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent";
+// Google Gemini 2.0 Flash API URL (as requested)
+const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
 
 // Unsplash API for retrieving relevant images based on prompt
 const UNSPLASH_API_URL = "https://source.unsplash.com/random?";
 
-// Function to generate an image from a prompt using combination of Gemini API and Unsplash
+// Function to generate an image from a prompt
 export async function generateImage(prompt: string): Promise<string> {
   try {
     // Check for Gemini API key
@@ -20,10 +20,10 @@ export async function generateImage(prompt: string): Promise<string> {
     try {
       console.log(`Generating image for prompt: "${prompt}" using Gemini API for keyword extraction`);
       
-      // First use Gemini to extract relevant keywords from the prompt
+      // Use the Gemini 2.0 Flash API to get better keywords
       const geminiUrl = `${GEMINI_API_URL}?key=${apiKey}`;
       
-      // Request to extract keywords with Gemini 
+      // Request to extract keywords with Gemini 2.0 Flash
       const response = await fetch(geminiUrl, {
         method: 'POST',
         headers: {
@@ -32,13 +32,15 @@ export async function generateImage(prompt: string): Promise<string> {
         body: JSON.stringify({
           contents: [{
             parts: [{
-              text: `Extract 3-5 important keywords from this prompt that would be useful for an image search: "${prompt}". 
-              Return ONLY the keywords separated by commas, with no additional explanation or formatting.`
+              text: `Extract exactly 5 specific and descriptive keywords from this prompt that would be most useful for finding a striking, relevant image: "${prompt}". 
+              Return ONLY a comma-separated list of keywords, with no additional text, explanation or formatting.`
             }]
           }],
           generationConfig: {
-            temperature: 0.2,
-            maxOutputTokens: 50
+            temperature: 0.1,
+            maxOutputTokens: 50,
+            topP: 0.8,
+            topK: 10
           }
         })
       });

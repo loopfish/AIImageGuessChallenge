@@ -26,35 +26,45 @@ function Router() {
 }
 
 function App() {
-  // Create a websocket connection
+  // Create a websocket connection using relative path instead of explicit port
   useEffect(() => {
-    // Simple WebSocket connection test 
+    // Simple WebSocket connection test
     const connectWebSocket = () => {
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const host = window.location.hostname;
-      const wsUrl = `${protocol}//${host}:5000/ws`;
-      
-      console.log("Testing direct WebSocket connection to:", wsUrl);
-      
-      const socket = new WebSocket(wsUrl);
-      
-      socket.onopen = () => {
-        console.log("Direct WebSocket connection successful!");
-      };
-      
-      socket.onerror = (error) => {
-        console.error("Direct WebSocket connection error:", error);
-      };
-      
-      socket.onclose = () => {
-        console.log("Direct WebSocket connection closed");
-      };
-      
-      return () => {
-        if (socket && socket.readyState === WebSocket.OPEN) {
-          socket.close();
-        }
-      };
+      try {
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const host = window.location.host; // This includes port if present
+        const wsUrl = `${protocol}//${host}/ws`;
+        
+        console.log("Testing direct WebSocket connection to:", wsUrl);
+        
+        const socket = new WebSocket(wsUrl);
+        
+        socket.onopen = () => {
+          console.log("Direct WebSocket connection successful!");
+        };
+        
+        socket.onmessage = (event) => {
+          console.log("Received message from server:", event.data);
+        };
+        
+        socket.onerror = (error) => {
+          console.error("Direct WebSocket connection error:", error);
+        };
+        
+        socket.onclose = (event) => {
+          console.log("Direct WebSocket connection closed:", event.code, event.reason);
+        };
+        
+        return () => {
+          console.log("Cleaning up WebSocket connection");
+          if (socket && socket.readyState === WebSocket.OPEN) {
+            socket.close();
+          }
+        };
+      } catch (error) {
+        console.error("Error in WebSocket setup:", error);
+        return () => {}; // Empty cleanup function
+      }
     };
     
     const cleanup = connectWebSocket();

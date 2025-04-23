@@ -155,10 +155,10 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
       setLoading(true);
       setError(null);
       
-      // Connect to the WebSocket server - use the same port as the server (5000)
+      // Connect to the WebSocket server using host which includes the port
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const host = window.location.hostname; // Just the hostname without port
-      const wsUrl = `${protocol}//${host}:5000/ws`;
+      const host = window.location.host; // Includes hostname and port
+      const wsUrl = `${protocol}//${host}/ws`;
       console.log("Connecting to WebSocket at:", wsUrl);
       
       const newSocket = await connect(wsUrl);

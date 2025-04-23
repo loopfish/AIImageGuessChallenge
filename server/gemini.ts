@@ -47,7 +47,9 @@ export async function generateImage(prompt: string): Promise<string> {
       }
 
       // Process the response
-      const responseData = await response.json();
+      const responseData = await response.json() as { 
+        artifacts?: Array<{ base64: string }> 
+      };
       
       if (!responseData.artifacts || responseData.artifacts.length === 0) {
         throw new Error("No image generated from API");

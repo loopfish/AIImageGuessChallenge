@@ -264,7 +264,12 @@ export default function Game() {
   
   // Render appropriate view based on game state
   const renderGameView = () => {
-    if (!gameState.game) {
+    // Special case for lobby
+    if (code === 'lobby') {
+      return <HostLobby />;
+    }
+    
+    if (!gameState || !gameState.game) {
       return (
         <div className="text-center p-8">
           <h2 className="text-2xl font-heading font-semibold text-neutral-dark mb-4">

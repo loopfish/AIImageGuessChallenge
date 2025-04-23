@@ -317,7 +317,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
             
             // First check if the saved player ID is valid for this game
             if (savedPlayerId) {
-              const existingPlayer = data.players.find(p => p.id === savedPlayerId);
+              const existingPlayer = data.players.find((p: any) => p.id === savedPlayerId);
               if (existingPlayer) {
                 currentPlayerId = existingPlayer.id;
               }

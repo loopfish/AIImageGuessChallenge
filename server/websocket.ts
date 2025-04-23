@@ -51,13 +51,16 @@ export function setupWebsocketHandlers(wss: WebSocketServer, storage: IStorage) 
 
     // Store the client connection
     clients.set(clientId, { socket });
+    console.log(`Total connected clients: ${clients.size}`);
+    console.log(`Game rooms: ${gameClients.size}`);
     
     // Send a welcome message to confirm connection is working
     try {
-      socket.send(JSON.stringify({
+      const welcomeMessage = JSON.stringify({
         type: GameMessageType.GAME_STATE,
         payload: { message: "Welcome to the game server!" }
-      }));
+      });
+      socket.send(welcomeMessage);
       console.log(`Sent welcome message to client ${clientId}`);
     } catch (error) {
       console.error(`Failed to send welcome message to client ${clientId}:`, error);
@@ -68,6 +71,11 @@ export function setupWebsocketHandlers(wss: WebSocketServer, storage: IStorage) 
       try {
         const parsedMessage: WebSocketMessage = JSON.parse(message);
         console.log(`Received message type: ${parsedMessage.type}`);
+        
+        // Debug special message types more verbosely
+        if (parsedMessage.type === GameMessageType.NEXT_ROUND) {
+          console.log(`NEXT_ROUND received from client ${clientId}:`, parsedMessage.payload);
+        }
 
         switch (parsedMessage.type) {
           case GameMessageType.CREATE_GAME:
@@ -383,7 +391,7 @@ async function handleNextRound(message: NextRoundMessage, storage: IStorage) {
       throw new Error("Game not found");
     }
     
-    console.log(`Current round ${game.currentRound}, total rounds ${game.totalRounds}`);
+    console.log(`Game found: ${game.code}, status: ${game.status}, current round ${game.currentRound}, total rounds ${game.totalRounds}`);
     
     // Check if we've reached max rounds
     if (game.currentRound >= game.totalRounds) {
@@ -392,37 +400,57 @@ async function handleNextRound(message: NextRoundMessage, storage: IStorage) {
       return;
     }
     
+    // Mark current round as completed
+    const currentRound = await storage.getCurrentRound(gameId);
+    if (currentRound) {
+      console.log(`Found current round ${currentRound.id}, round number ${currentRound.roundNumber} for game ${game.code}`);
+      await storage.updateRound(currentRound.id, {
+        status: "completed",
+        endTime: new Date()
+      });
+    } else {
+      console.log(`No current round found for game ${game.code}`);
+    }
+    
     // Generate image from Gemini API
+    console.log(`Generating image for prompt: "${prompt}"`);
     const imageUrl = await generateImage(prompt);
+    console.log(`Generated image URL for prompt: "${prompt}"`);
     
     // Create new round
+    const newRoundNumber = game.currentRound + 1;
+    console.log(`Creating round ${newRoundNumber} for game ${game.code}`);
     const round = await storage.createRound({
       gameId,
-      roundNumber: game.currentRound + 1,
+      roundNumber: newRoundNumber,
       prompt,
       imageUrl,
       status: "active"
     });
     
     // Update round with start time
+    console.log(`Setting start time for round ${round.id}`);
     await storage.updateRound(round.id, { 
       startTime: new Date(),
       status: "active"
     });
     
     // Update game status
+    console.log(`Updating game ${gameId} to round ${newRoundNumber}`);
     await storage.updateGame(gameId, { 
       status: "playing",
-      currentRound: game.currentRound + 1 
+      currentRound: newRoundNumber
     });
     
     // Get updated game and notify clients
     const updatedGame = await storage.getGame(gameId);
     if (updatedGame) {
       // Start the round timer
+      console.log(`Starting timer for game ${game.code} with ${updatedGame.timerSeconds} seconds`);
       startRoundTimer(gameId, updatedGame.timerSeconds, storage);
       
       // Notify clients that round has started
+      console.log(`Notifying clients that round ${round.roundNumber} has started`);
       sendToGame(gameId, {
         type: GameMessageType.ROUND_START,
         payload: {
@@ -432,14 +460,17 @@ async function handleNextRound(message: NextRoundMessage, storage: IStorage) {
       });
       
       // Send updated game state
+      console.log(`Sending updated game state to all clients for game ${game.code}`);
       sendGameState(gameId, storage);
       
       console.log(`Game ${updatedGame.code} advanced to round ${updatedGame.currentRound}`);
+    } else {
+      console.error(`Failed to retrieve updated game after updating round`);
     }
   } catch (error) {
     console.error("Error starting next round:", error);
     // Send error to all clients in the game
-    sendErrorToGameClients(message.payload.gameId, "Failed to start next round");
+    sendErrorToGameClients(message.payload.gameId, "Failed to start next round: " + (error as Error).message);
   }
 }
 

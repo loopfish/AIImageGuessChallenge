@@ -114,40 +114,59 @@ export default function ResultsScreen() {
       return;
     }
     
+    console.log(`Game object:`, game);
     console.log(`Current round: ${game.currentRound}, Total rounds: ${game.totalRounds}`);
     
-    // Check if we've reached the final round
-    if (game.currentRound >= game.totalRounds) {
-      console.log("Final round reached, ending game");
-      // End the game
-      const endGameMessage = JSON.stringify({
-        type: GameMessageType.END_GAME,
-        payload: {
-          gameId: game.id
-        }
-      });
-      console.log("Sending end game message:", endGameMessage);
-      socket.send(endGameMessage);
-    } else {
-      console.log("Prompting for next round input");
-      // Ask for prompt input for the next round
-      const promptInput = window.prompt("Enter prompt for the next round:", "");
-      console.log("User entered prompt:", promptInput);
-      
-      if (promptInput && promptInput.trim()) {
-        // Start next round
-        const nextRoundMessage = JSON.stringify({
-          type: GameMessageType.NEXT_ROUND,
+    try {
+      // Check if we've reached the final round
+      if (game.currentRound >= game.totalRounds) {
+        console.log("Final round reached, ending game");
+        // End the game
+        const endGameMessage = JSON.stringify({
+          type: GameMessageType.END_GAME,
           payload: {
-            gameId: game.id,
-            prompt: promptInput
+            gameId: game.id
           }
         });
-        console.log("Sending next round message:", nextRoundMessage);
-        socket.send(nextRoundMessage);
+        console.log("Sending end game message:", endGameMessage);
+        socket.send(endGameMessage);
       } else {
-        console.log("User cancelled or entered empty prompt");
+        console.log("Prompting for next round input");
+        // Ask for prompt input for the next round
+        const promptInput = window.prompt("Enter prompt for the next round:", "");
+        console.log("User entered prompt:", promptInput);
+        
+        if (promptInput && promptInput.trim()) {
+          try {
+            // Start next round
+            const nextRoundMessage = JSON.stringify({
+              type: GameMessageType.NEXT_ROUND,
+              payload: {
+                gameId: game.id,
+                prompt: promptInput
+              }
+            });
+            console.log("Sending next round message:", nextRoundMessage);
+            socket.send(nextRoundMessage);
+          } catch (error) {
+            console.error("Error sending next round message:", error);
+            toast({
+              title: "Error starting next round",
+              description: "There was a problem starting the next round. Please try again.",
+              variant: "destructive"
+            });
+          }
+        } else {
+          console.log("User cancelled or entered empty prompt");
+        }
       }
+    } catch (error) {
+      console.error("Error in next round handler:", error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive"
+      });
     }
   };
   

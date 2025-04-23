@@ -11,6 +11,7 @@ import Home from "@/pages/home";
 import Game from "@/pages/game";
 import HowToPlay from "@/pages/how-to-play";
 import About from "@/pages/about";
+import { useEffect } from "react";
 
 function Router() {
   return (
@@ -25,6 +26,41 @@ function Router() {
 }
 
 function App() {
+  // Create a websocket connection
+  useEffect(() => {
+    // Simple WebSocket connection test 
+    const connectWebSocket = () => {
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const host = window.location.hostname;
+      const wsUrl = `${protocol}//${host}:5000/ws`;
+      
+      console.log("Testing direct WebSocket connection to:", wsUrl);
+      
+      const socket = new WebSocket(wsUrl);
+      
+      socket.onopen = () => {
+        console.log("Direct WebSocket connection successful!");
+      };
+      
+      socket.onerror = (error) => {
+        console.error("Direct WebSocket connection error:", error);
+      };
+      
+      socket.onclose = () => {
+        console.log("Direct WebSocket connection closed");
+      };
+      
+      return () => {
+        if (socket && socket.readyState === WebSocket.OPEN) {
+          socket.close();
+        }
+      };
+    };
+    
+    const cleanup = connectWebSocket();
+    return cleanup;
+  }, []);
+  
   return (
     <QueryClientProvider client={queryClient}>
       <GameProvider>

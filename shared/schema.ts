@@ -135,6 +135,7 @@ export interface GameState {
   playerGuesses?: Guess[];
   roundResults?: RoundResult;
   timeRemaining?: number;
+  currentPlayerId?: number; // ID of the current player
 }
 
 // WebSocket message types

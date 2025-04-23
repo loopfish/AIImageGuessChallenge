@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode, useMemo } from "react";
 import { useWebSocket } from "./use-websocket";
 import { GameState, WebSocketMessage, GameMessageType } from "@shared/schema";
 import { useLocation } from "wouter";
@@ -23,25 +23,16 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [gameState, setGameState] = useState<GameState | null>(null);
-  const [location, navigate] = useLocation();
+  const [location] = useLocation();
   
-  // Get URL info for game code
-  const urlParts = location.split('/');
-  const gameCode = urlParts[urlParts.length - 1];
+  // Get URL info for game code - using useMemo to prevent recreation on every render
+  const gameCode = useMemo(() => {
+    const urlParts = location.split('/');
+    return urlParts[urlParts.length - 1];
+  }, [location]);
   
-  // Setup WebSocket connection
-  const { 
-    socket, 
-    isConnected, 
-    connect,
-    error: wsError 
-  } = useWebSocket({
-    autoConnect: false,
-    onMessage: handleWebSocketMessage,
-  });
-  
-  // Handle incoming WebSocket messages
-  function handleWebSocketMessage(event: MessageEvent) {
+  // Define WebSocket message handler
+  const handleWebSocketMessage = useCallback((event: MessageEvent) => {
     try {
       const message: WebSocketMessage = JSON.parse(event.data);
       console.log("WebSocket message received:", message.type);
@@ -138,7 +129,20 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     } catch (error) {
       console.error("Error handling WebSocket message:", error);
     }
-  }
+  }, []);
+  
+  // Setup WebSocket connection with the memoized handler
+  const { 
+    socket, 
+    isConnected, 
+    connect,
+    error: wsError 
+  } = useWebSocket({
+    autoConnect: false,
+    onMessage: handleWebSocketMessage,
+  });
+  
+  // We're using the useCallback version of handleWebSocketMessage above
   
   // Connect to WebSocket
   const connectWebSocket = useCallback(async () => {

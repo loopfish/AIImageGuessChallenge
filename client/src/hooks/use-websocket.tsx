@@ -56,10 +56,13 @@ export function useWebSocket({
       // Determine WebSocket URL
       let wsUrl = customUrl || url;
       if (!wsUrl) {
+        // Use fixed port 5000 to ensure consistent connection
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        wsUrl = `${protocol}//${window.location.host}/ws`;
+        const host = window.location.hostname;
+        wsUrl = `${protocol}//${host}:5000/ws`;
       }
-
+      
+      console.log("Opening WebSocket connection to:", wsUrl);
       setState(prev => ({ ...prev, connecting: true, error: null }));
 
       return new Promise((resolve, reject) => {

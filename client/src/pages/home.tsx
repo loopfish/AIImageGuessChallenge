@@ -54,14 +54,29 @@ export default function Home() {
       const gameCreatedHandler = (event: MessageEvent) => {
         try {
           const message = JSON.parse(event.data);
+          console.log("Home page received message:", message.type);
+          
           if (message.type === GameMessageType.GAME_STATE && message.payload.game) {
             const gameCode = message.payload.game.code;
+            console.log("Game created with code:", gameCode);
+            
+            // Save the game code to localStorage for reconnection purposes
+            try {
+              localStorage.setItem('lastGameCode', gameCode);
+              localStorage.setItem('lastGameTimestamp', Date.now().toString());
+              console.log("Saved game code to localStorage:", gameCode);
+            } catch (err) {
+              console.error("Error saving game code to localStorage:", err);
+            }
+            
             toast({
               title: "Game created",
               description: `Game code: ${gameCode}. Redirecting to your game lobby...`
             });
+            
             // Clean up this one-time event listener
             currentSocket.removeEventListener('message', gameCreatedHandler);
+            
             // Navigate to the actual game with the code
             navigate(`/game/${gameCode}`);
           }
@@ -73,15 +88,37 @@ export default function Home() {
       // Add the temporary listener for game creation
       currentSocket.addEventListener('message', gameCreatedHandler);
       
-      // Set a fallback timeout in case we don't get a proper response
-      setTimeout(() => {
+      // Set a longer timeout and a more robust fallback
+      const fallbackTimer = setTimeout(() => {
+        // Check if we got a game code in localStorage from another listener
+        let savedGameCode;
+        try {
+          savedGameCode = localStorage.getItem('lastGameCode');
+          const timestamp = localStorage.getItem('lastGameTimestamp');
+          
+          // Only use this code if it's recent (set in the last 10 seconds)
+          if (savedGameCode && timestamp && (Date.now() - parseInt(timestamp)) < 10000) {
+            console.log("Using saved game code from localStorage:", savedGameCode);
+            currentSocket.removeEventListener('message', gameCreatedHandler);
+            toast({
+              title: "Game created",
+              description: `Game code: ${savedGameCode}. Redirecting to your game lobby...`
+            });
+            navigate(`/game/${savedGameCode}`);
+            return;
+          }
+        } catch (err) {
+          console.error("Error retrieving game code from localStorage:", err);
+        }
+        
+        // If we reach here, we didn't get a proper response
         currentSocket.removeEventListener('message', gameCreatedHandler);
         toast({
           title: "Game lobby ready",
           description: "Redirecting to game setup..."
         });
         navigate("/game/lobby");
-      }, 2000);
+      }, 5000); // Increased timeout from 2 to 5 seconds
     } catch (error) {
       console.error("Error creating game:", error);
       toast({

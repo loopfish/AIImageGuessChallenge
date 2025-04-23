@@ -815,19 +815,46 @@ function sendErrorToGameClients(gameId: number, errorMessage: string) {
 // Handle player reconnection request
 async function handlePlayerReconnect(clientId: string, payload: any, storage: IStorage) {
   try {
-    const { playerId, gameId } = payload;
-    console.log(`Reconnection request from client ${clientId} for player ${playerId} in game ${gameId}`);
+    console.log(`Reconnection request from client ${clientId} with payload:`, payload);
     
-    if (!playerId || !gameId) {
-      console.error("Invalid reconnection request - missing playerId or gameId");
-      return sendErrorToClient(clientId, "Invalid reconnection request. Missing player or game ID.");
+    // Check for different reconnection methods (game code, game ID, or player ID)
+    let gameId = payload.gameId;
+    let playerId = payload.playerId;
+    const gameCode = payload.gameCode;
+    
+    // If we have a game code but no gameId, look up the game
+    if (!gameId && gameCode) {
+      console.log(`Looking up game by code: ${gameCode}`);
+      const game = await storage.getGameByCode(gameCode);
+      if (game) {
+        gameId = game.id;
+        console.log(`Found game ${gameId} for code ${gameCode}`);
+      } else {
+        console.error(`Game with code ${gameCode} not found`);
+        return sendErrorToClient(clientId, `Game with code ${gameCode} not found. Please create a new game.`);
+      }
     }
     
-    // Verify the player exists
-    const player = await storage.getPlayer(playerId);
-    if (!player) {
-      console.error(`Player ${playerId} not found during reconnection attempt`);
-      return sendErrorToClient(clientId, "Player not found. Please rejoin the game.");
+    // At this point we need a gameId or playerId at minimum
+    if (!gameId && !playerId) {
+      console.error("Invalid reconnection request - can't determine game or player");
+      return sendErrorToClient(clientId, "Invalid reconnection request. Insufficient information to reconnect.");
+    }
+    
+    // If we have a playerId but no gameId, look up the player's game
+    if (!gameId && playerId) {
+      // Get player first to find their game
+      const player = await storage.getPlayer(playerId);
+      if (player) {
+        gameId = player.gameId;
+        console.log(`Found game ${gameId} for player ${playerId}`);
+      }
+    }
+    
+    // At this point we need a gameId
+    if (!gameId) {
+      console.error("Invalid reconnection request - can't determine game");
+      return sendErrorToClient(clientId, "Invalid reconnection request. Cannot determine which game to reconnect to.");
     }
     
     // Verify the game exists
@@ -835,6 +862,49 @@ async function handlePlayerReconnect(clientId: string, payload: any, storage: IS
     if (!game) {
       console.error(`Game ${gameId} not found during reconnection attempt`);
       return sendErrorToClient(clientId, "Game not found. Please create a new game.");
+    }
+    
+    // If we know the player, verify they exist
+    let player = null;
+    if (playerId) {
+      player = await storage.getPlayer(playerId);
+      if (!player) {
+        console.error(`Player ${playerId} not found during reconnection attempt`);
+        playerId = null; // Reset so we can assign a new player below
+      }
+    }
+    
+    // If no valid player was found but we have a game, try to get a player from username or create a new one
+    if (!player && payload.username) {
+      // First try to find an existing player with this username
+      const players = await storage.getPlayersByGameId(gameId);
+      const existingPlayer = players.find(p => p.username === payload.username);
+      
+      if (existingPlayer) {
+        player = existingPlayer;
+        playerId = existingPlayer.id;
+        console.log(`Found existing player ${existingPlayer.username} (${existingPlayer.id}) for reconnection`);
+      } else {
+        // Create a new player in the game
+        const newPlayer = await storage.createPlayer({
+          gameId,
+          userId: Date.now(), // Generate temporary user ID
+          username: payload.username,
+          score: 0,
+          isHost: false,
+          isActive: true
+        });
+        
+        player = newPlayer;
+        playerId = newPlayer.id;
+        console.log(`Created new player ${newPlayer.username} (${newPlayer.id}) for game ${game.code}`);
+      }
+    }
+    
+    // If we still have no player, we can't proceed
+    if (!player) {
+      console.error(`No valid player found for reconnection to game ${game.code}`);
+      return sendErrorToClient(clientId, "Could not determine player. Please provide a username.");
     }
     
     console.log(`Reconnecting player ${player.username} (${playerId}) to game ${game.code} (${gameId})`);

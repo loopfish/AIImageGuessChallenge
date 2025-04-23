@@ -11,6 +11,7 @@ import Home from "@/pages/home";
 import Game from "@/pages/game";
 import HowToPlay from "@/pages/how-to-play";
 import About from "@/pages/about";
+import WebSocketTest from "@/pages/websocket-test";
 import { useEffect } from "react";
 
 function Router() {
@@ -20,6 +21,7 @@ function Router() {
       <Route path="/game/:code" component={Game} />
       <Route path="/how-to-play" component={HowToPlay} />
       <Route path="/about" component={About} />
+      <Route path="/websocket-test" component={WebSocketTest} />
       <Route component={NotFound} />
     </Switch>
   );

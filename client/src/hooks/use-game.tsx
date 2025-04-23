@@ -184,6 +184,16 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
         case GameMessageType.GAME_ERROR:
           setError(message.payload.message);
           break;
+          
+        case GameMessageType.RECONNECT_SUCCESS:
+          console.log("Reconnection successful:", message.payload);
+          // We don't need to do more here as the server will send a game state update next
+          break;
+          
+        case GameMessageType.RECONNECT_FAILURE:
+          console.error("Reconnection failed:", message.payload);
+          setError(`Failed to reconnect: ${message.payload.message}`);
+          break;
       }
     } catch (error) {
       console.error("Error handling WebSocket message:", error);
@@ -199,6 +209,24 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
   } = useWebSocket({
     autoConnect: false,
     onMessage: handleWebSocketMessage,
+    reconnectAttempts: 5,
+    reconnectInterval: 3000,
+    onOpen: () => {
+      // When connection opens (including reconnects), attempt to restore game state
+      const playerId = getCurrentPlayerFromStorage();
+      const gameId = gameState?.game?.id;
+      
+      // If we have both a player ID and game ID stored, send a reconnect request
+      if (playerId && gameId && socket) {
+        console.log(`Attempting to reconnect player ${playerId} to game ${gameId}`);
+        
+        // Send reconnect request to server
+        socket.send(JSON.stringify({
+          type: GameMessageType.RECONNECT_REQUEST,
+          payload: { playerId, gameId }
+        }));
+      }
+    }
   });
   
   // We're using the useCallback version of handleWebSocketMessage above

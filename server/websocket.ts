@@ -863,7 +863,7 @@ async function handlePlayerReconnect(clientId: string, payload: any, storage: IS
     const reconnectedClient = clients.get(clientId);
     if (reconnectedClient && reconnectedClient.socket.readyState === WebSocket.OPEN) {
       reconnectedClient.socket.send(JSON.stringify({
-        type: ReconnectType.SUCCESS,
+        type: GameMessageType.RECONNECT_SUCCESS,
         payload: { 
           message: "Reconnection successful",
           playerId,
@@ -884,7 +884,7 @@ async function handlePlayerReconnect(clientId: string, payload: any, storage: IS
     const client = clients.get(clientId);
     if (client && client.socket.readyState === WebSocket.OPEN) {
       client.socket.send(JSON.stringify({
-        type: ReconnectType.FAILURE,
+        type: GameMessageType.RECONNECT_FAILURE,
         payload: { 
           message: "Reconnection failed",
           error: (error as Error).message

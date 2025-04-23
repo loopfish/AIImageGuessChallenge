@@ -31,6 +31,31 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     return urlParts[urlParts.length - 1];
   }, [location]);
   
+  // Store current player ID in localStorage to survive reconnections
+  const saveCurrentPlayerToStorage = useCallback((playerId: number) => {
+    try {
+      localStorage.setItem('currentPlayerId', playerId.toString());
+      console.log(`Saved current player ID to storage: ${playerId}`);
+    } catch (error) {
+      console.error("Error saving player ID to storage:", error);
+    }
+  }, []);
+
+  // Get current player ID from localStorage
+  const getCurrentPlayerFromStorage = useCallback((): number | null => {
+    try {
+      const savedId = localStorage.getItem('currentPlayerId');
+      if (savedId) {
+        const playerId = parseInt(savedId, 10);
+        console.log(`Retrieved player ID from storage: ${playerId}`);
+        return playerId;
+      }
+    } catch (error) {
+      console.error("Error retrieving player ID from storage:", error);
+    }
+    return null;
+  }, []);
+  
   // Define WebSocket message handler
   const handleWebSocketMessage = useCallback((event: MessageEvent) => {
     try {
@@ -45,9 +70,26 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
           if (gameStateData?.players && gameStateData.players.length > 0) {
             console.log("Players in game state:", gameStateData.players);
             
-            // Try to find current player, we'll just use first player for now
-            // This is a simplification - in a real app we'd match based on stored user ID
-            const currentPlayer = gameStateData.players[0]; // Fallback to first player
+            // Try to find current player from localStorage first
+            const savedPlayerId = getCurrentPlayerFromStorage();
+            let currentPlayer = null;
+            
+            if (savedPlayerId) {
+              // Find player in the game state players list
+              currentPlayer = gameStateData.players.find((p: any) => p.id === savedPlayerId);
+              console.log(`Looking for saved player ID ${savedPlayerId}, found:`, currentPlayer);
+            }
+            
+            // If no player found with saved ID, default to first player
+            if (!currentPlayer) {
+              currentPlayer = gameStateData.players[0];
+              console.log("No matching saved player, defaulting to first player:", currentPlayer);
+              
+              // Save this player ID for future reconnects
+              if (currentPlayer) {
+                saveCurrentPlayerToStorage(currentPlayer.id);
+              }
+            }
             
             if (currentPlayer) {
               console.log("Selected current player:", currentPlayer);
@@ -146,7 +188,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     } catch (error) {
       console.error("Error handling WebSocket message:", error);
     }
-  }, []);
+  }, [getCurrentPlayerFromStorage, saveCurrentPlayerToStorage]);
   
   // Setup WebSocket connection with the memoized handler
   const { 
@@ -220,9 +262,35 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
             
             // Set game data
             if (data) {
+              // Try to find current player from localStorage first
+              const savedPlayerId = getCurrentPlayerFromStorage();
+              let currentPlayerId;
+              
+              if (savedPlayerId && data.players) {
+                // Find player in the game state players list
+                const existingPlayer = data.players.find((p: any) => p.id === savedPlayerId);
+                if (existingPlayer) {
+                  currentPlayerId = existingPlayer.id;
+                  console.log(`Found player with saved ID ${savedPlayerId}:`, existingPlayer);
+                } else {
+                  console.log(`Player with saved ID ${savedPlayerId} not found in game`);
+                }
+              }
+              
+              // If no saved player or not found, default to first player
+              if (!currentPlayerId && data.players && data.players.length > 0) {
+                currentPlayerId = data.players[0]?.id;
+                console.log(`Defaulting to first player with ID ${currentPlayerId}`);
+                
+                // Save this player ID for future reconnects
+                if (currentPlayerId) {
+                  saveCurrentPlayerToStorage(currentPlayerId);
+                }
+              }
+              
               const gameStateWithPlayer = {
                 ...data,
-                currentPlayerId: data.players[0]?.id // Temporary, will be updated by WebSocket
+                currentPlayerId
               };
               console.log("Setting game state with player ID:", gameStateWithPlayer);
               setGameState(gameStateWithPlayer);
@@ -241,7 +309,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
       // On home page, not in a game
       setLoading(false);
     }
-  }, [isConnected, socket, location, gameCode]);
+  }, [isConnected, socket, location, gameCode, saveCurrentPlayerToStorage, getCurrentPlayerFromStorage]);
   
   const value = {
     gameState,

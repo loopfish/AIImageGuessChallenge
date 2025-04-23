@@ -70,6 +70,11 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
       const message: WebSocketMessage = JSON.parse(event.data);
       console.log("WebSocket message received:", message.type);
       
+      // Debug log for game state messages
+      if (message.type === GameMessageType.GAME_STATE) {
+        console.log("Full game state message:", message.payload);
+      }
+      
       switch (message.type) {
         case GameMessageType.GAME_STATE:
           const gameData = message.payload as GameState;

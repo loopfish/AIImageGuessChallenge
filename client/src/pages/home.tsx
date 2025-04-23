@@ -49,14 +49,39 @@ export default function Home() {
         }
       }));
       
-      // Listen for game creation response - handled in the GameProvider
+      // The game creation will be handled by the server (websocket.ts)
+      // We'll add a listener specifically for game creation response
+      const gameCreatedHandler = (event: MessageEvent) => {
+        try {
+          const message = JSON.parse(event.data);
+          if (message.type === GameMessageType.GAME_STATE && message.payload.game) {
+            const gameCode = message.payload.game.code;
+            toast({
+              title: "Game created",
+              description: `Game code: ${gameCode}. Redirecting to your game lobby...`
+            });
+            // Clean up this one-time event listener
+            currentSocket.removeEventListener('message', gameCreatedHandler);
+            // Navigate to the actual game with the code
+            navigate(`/game/${gameCode}`);
+          }
+        } catch (error) {
+          console.error("Error handling game creation response:", error);
+        }
+      };
+      
+      // Add the temporary listener for game creation
+      currentSocket.addEventListener('message', gameCreatedHandler);
+      
+      // Set a fallback timeout in case we don't get a proper response
       setTimeout(() => {
+        currentSocket.removeEventListener('message', gameCreatedHandler);
         toast({
-          title: "Game created",
-          description: "Redirecting to your game lobby..."
+          title: "Game lobby ready",
+          description: "Redirecting to game setup..."
         });
         navigate("/game/lobby");
-      }, 1000);
+      }, 2000);
     } catch (error) {
       console.error("Error creating game:", error);
       toast({

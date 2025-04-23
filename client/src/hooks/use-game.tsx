@@ -307,6 +307,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
           setLoading(true);
           
           const apiUrl = `/api/games/${gameCode}/state`;
+          console.log(`Fetching from API URL: ${apiUrl}`);
           const response = await fetch(apiUrl);
           
           if (!response.ok) {
@@ -314,17 +315,20 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
           }
           
           const data = await response.json();
+          console.log("Game data from API:", data);
           
           // Process player info
           let currentPlayerId = null;
           if (data.players && data.players.length > 0) {
             const savedPlayerId = getCurrentPlayerFromStorage();
+            console.log("Saved player ID:", savedPlayerId, "Players:", data.players);
             
             // First check if the saved player ID is valid for this game
             if (savedPlayerId) {
               const existingPlayer = data.players.find((p: any) => p.id === savedPlayerId);
               if (existingPlayer) {
                 currentPlayerId = existingPlayer.id;
+                console.log("Found matching player in game:", existingPlayer);
               }
             }
             
@@ -332,11 +336,23 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
             if (!currentPlayerId) {
               currentPlayerId = data.players[0].id;
               saveCurrentPlayerToStorage(currentPlayerId);
+              console.log("Using first player as current player:", currentPlayerId);
             }
+          }
+          
+          // If this is an error message rather than a game
+          if (!data.game) {
+            console.error("Invalid game data received:", data);
+            throw new Error("Invalid game data received");
           }
           
           // Update game state
           setGameState({
+            ...data,
+            currentPlayerId
+          });
+          
+          console.log("Game state updated:", {
             ...data,
             currentPlayerId
           });

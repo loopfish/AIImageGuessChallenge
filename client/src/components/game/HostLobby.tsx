@@ -67,10 +67,21 @@ export default function HostLobby() {
     }
     
     // Send start game message with the prompt
+    if (!gameState?.game?.id) {
+      toast({
+        title: "Error",
+        description: "Game ID is missing. Please try refreshing the page.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    console.log(`Starting game with ID: ${gameState.game.id} and prompt: ${prompt}`);
+    
     socket.send(JSON.stringify({
       type: GameMessageType.START_GAME,
       payload: {
-        gameId: gameState?.game?.id,
+        gameId: gameState.game.id,
         prompt: prompt
       }
     }));

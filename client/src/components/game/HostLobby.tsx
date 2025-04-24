@@ -156,11 +156,6 @@ export default function HostLobby() {
 
   return (
     <div className="host-lobby scale-in">
-      {/* Always include player connection info at the top */}
-      <div className="player-connection-container mb-6" style={{display: 'block', visibility: 'visible'}}>
-        <PlayerConnectionInfo />
-      </div>
-    
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         {/* Left Column: Game Setup */}
         <div className="md:col-span-2 space-y-6">

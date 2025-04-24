@@ -383,6 +383,14 @@ export default function Game() {
     }
   };
   
+  // Debug information
+  console.log("Game page rendering with renderGameView", {
+    hasGameState: Boolean(gameState),
+    isLoading,
+    error
+  });
+
+  // Always wrap content in GameLayout to ensure consistent connection info display
   return (
     <GameLayout>
       <div className="game-container">

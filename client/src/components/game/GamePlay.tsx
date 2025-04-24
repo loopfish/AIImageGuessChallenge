@@ -129,11 +129,6 @@ export default function GamePlay() {
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
         {/* Left Column (Narrow) - Game Status & Players */}
         <div className="lg:col-span-1 space-y-6">
-          {/* Player Connection Info - Always render with forced visibility */}
-          <div className="player-connection-container" style={{display: 'block', visibility: 'visible'}}>
-            <PlayerConnectionInfo />
-          </div>
-          
           {/* Round Info */}
           <div className="bg-white rounded-xl shadow-md p-4">
             <div className="flex items-center justify-between mb-3">

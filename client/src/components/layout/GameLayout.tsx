@@ -12,13 +12,20 @@ interface GameLayoutProps {
  * Automatically includes the PlayerConnectionInfo on all screens
  */
 export function GameLayout({ children, showConnectionInfo = true }: GameLayoutProps) {
-  const { isConnected } = useGameContext();
+  const { gameState, isConnected } = useGameContext();
+
+  // Debug log for GameLayout component
+  console.log("GameLayout rendering with state:", {
+    isConnected,
+    showConnectionInfo,
+    hasGameState: Boolean(gameState)
+  });
 
   return (
     <div className="game-layout">
-      {/* Always show the connection panel if connected and flag is enabled */}
-      {showConnectionInfo && isConnected && (
-        <div className="mb-6">
+      {/* Always show the connection panel if flag is enabled, regardless of connection state */}
+      {showConnectionInfo && (
+        <div className="mb-6" style={{display: 'block', visibility: 'visible'}}>
           <PlayerConnectionInfo />
         </div>
       )}

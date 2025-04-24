@@ -8,6 +8,11 @@ interface PlayerListProps {
 export default function PlayerList({ showScores = false, className = "" }: PlayerListProps) {
   const { gameState } = useGameContext();
   
+  // Debug logging to help identify player list issues
+  console.log("PlayerList component - GameState:", gameState);
+  console.log("PlayerList - Players:", gameState?.players);
+  console.log("PlayerList - Online players:", gameState?.onlinePlayers);
+  
   const players = gameState?.players || [];
   const onlinePlayers = gameState?.onlinePlayers || [];
   const hostId = gameState?.game?.hostId;

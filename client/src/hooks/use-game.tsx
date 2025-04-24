@@ -164,7 +164,16 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
           break;
           
         case GameMessageType.GAME_ERROR:
-          setError(message.payload.message);
+          // Check for specific error messages
+          if (message.payload.message.includes("already submitted")) {
+            toast({
+              title: "One Guess Per Round",
+              description: "You've already submitted a guess for this round",
+              variant: "destructive",
+            });
+          } else {
+            setError(message.payload.message);
+          }
           break;
           
         case GameMessageType.RECONNECT_SUCCESS:

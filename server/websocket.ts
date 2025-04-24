@@ -331,6 +331,10 @@ async function handleJoinGame(
       try {
         // Send updated player list to all clients in the game
         const updatedPlayers = await storage.getPlayersByGameId(game.id);
+        
+        console.log(`Sending updated player list to game ${gameCode} with ${updatedPlayers.length} players`);
+        
+        // First update players list 
         sendToGame(game.id, {
           type: GameMessageType.PLAYER_UPDATE,
           payload: { players: updatedPlayers }
@@ -339,12 +343,18 @@ async function handleJoinGame(
         // Broadcast online players status
         updateOnlinePlayersStatus(game.id);
         
-        // Send complete game state to all clients to ensure consistency
-        sendGameState(game.id, storage);
+        // Wait another moment before sending full game state
+        setTimeout(async () => {
+          // Send complete game state to all clients to ensure consistency
+          sendGameState(game.id, storage);
+          
+          // Send individualized game state to new player to ensure they have latest data
+          sendGameStateToClient(clientId, game.id, storage);
+        }, 300);
       } catch (error) {
         console.error("Error sending delayed player updates:", error);
       }
-    }, 300); // Short delay to ensure client has time to set current player ID
+    }, 500); // Increased delay to ensure client has time to set current player ID
     
     console.log(`Player ${username} joined game ${gameCode}`);
   } catch (error) {

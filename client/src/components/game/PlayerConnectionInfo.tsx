@@ -153,9 +153,9 @@ export function PlayerConnectionInfo({ compact = false }: PlayerConnectionInfoPr
             </CardTitle>
             <div className="flex items-center gap-1">
               <UsersIcon className="h-3 w-3 text-gray-500" />
-              <span className="text-xs">{onlinePlayers.length}/{gameState.players.length}</span>
+              <span className="text-xs">{onlinePlayers.length}/{gameState?.players?.length || 0}</span>
               <Badge variant="outline" className="text-xs px-1.5 py-0 h-4 bg-green-100 text-green-800">
-                {gameState.game.code}
+                {gameState?.game?.code || ""}
               </Badge>
             </div>
           </div>

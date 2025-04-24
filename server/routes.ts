@@ -3,6 +3,11 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { WebSocketServer } from "ws";
 import { setupWebsocketHandlers } from "./websocket";
+
+// Extend global with broadcastServerRestart
+declare global {
+  var broadcastServerRestart: () => void;
+}
 // Import the simplified Gemini image implementation
 import { generateImage } from "./gemini-image";
 import { z } from "zod";
@@ -33,10 +38,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Setup WebSocket message handlers
   setupWebsocketHandlers(wss, storage);
+  
+  // Call the server restart function after a brief delay to allow WebSocket connections to establish
+  setTimeout(() => {
+    try {
+      console.log("Broadcasting server restart notification to all clients...");
+      if (global.broadcastServerRestart) {
+        global.broadcastServerRestart();
+      } else {
+        console.warn("broadcastServerRestart function not found in global scope");
+      }
+    } catch (error) {
+      console.error("Error broadcasting server restart:", error);
+    }
+  }, 5000);
 
   // API routes
   app.get("/api/health", async (_req, res) => {
     res.json({ status: "ok" });
+  });
+  
+  // Add an admin API route to force reset all clients
+  app.post("/api/admin/reset-clients", async (_req, res) => {
+    try {
+      // Reset all active games in the database
+      await storage.resetAllActiveGames();
+      
+      // Broadcast server restart message to all connected clients
+      if (global.broadcastServerRestart) {
+        global.broadcastServerRestart();
+        res.json({ status: "success", message: "Reset notification sent to all clients" });
+      } else {
+        res.status(500).json({ 
+          status: "error", 
+          message: "Failed to send reset notification - broadcastServerRestart not available" 
+        });
+      }
+    } catch (error) {
+      console.error("Error in reset-clients API:", error);
+      res.status(500).json({ status: "error", message: String(error) });
+    }
   });
   
   // Test route to create a game with predictable code

@@ -15,69 +15,76 @@ export async function generateImage(prompt: string): Promise<string> {
     }
 
     try {
-      console.log(`DEBUG: Generating image for prompt: "${prompt}" using Google Generative AI SDK`);
+      console.log(`DEBUG: Generating image for prompt: "${prompt}" using Gemini AI image generation (experimental)`);
       
       // Initialize the Gemini API client using the SDK
       const genAI = new GoogleGenerativeAI(apiKey);
-      
-      // For debugging
       console.log("DEBUG: Successfully initialized GoogleGenerativeAI client");
       
-      // Get the model - using gemini-2.0-flash (released after your knowledge cutoff)
-      const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+      // Use the experimental image generation model (gemini-2.0-flash-experimental-vision)
+      const imageModel = genAI.getGenerativeModel({ model: "gemini-pro-vision" });
       
-      // Create the prompt for keyword extraction
-      const promptText = `Extract exactly 5 specific and descriptive keywords from this prompt that would be most useful for finding a striking, relevant image: "${prompt}". 
-      Return ONLY a comma-separated list of keywords, with no additional text, explanation or formatting.`;
-      
-      // Configuration for generation
-      const generationConfig = {
-        temperature: 0.1,
-        maxOutputTokens: 50,
-        topP: 0.8,
-        topK: 10
-      };
-      
-      console.log("DEBUG: Calling Gemini API with SDK...");
-      
-      // Generate content with Gemini
-      const result = await model.generateContent({
-        contents: [{ role: "user", parts: [{ text: promptText }] }],
-        generationConfig
-      });
-      
-      // Get the response
-      const response = result.response;
-      console.log("DEBUG: Received response from Gemini API");
-      
-      // Extract the text content
-      let keywords = prompt; // Default to original prompt if extraction fails
-      
-      if (response && response.text) {
-        const text = response.text();
-        if (text) {
-          keywords = text.trim();
-          console.log(`DEBUG: Successfully extracted keywords: ${keywords}`);
-        } else {
-          console.log("DEBUG: Empty response text from Gemini API");
-        }
-      } else {
-        console.log("DEBUG: Could not extract text from Gemini API response");
-      }
-      
-      // Use Picsum to generate a random image
       try {
-        // Create a unique seed from the keywords to get consistent but varied images
-        const seed = createSeedFromKeywords(keywords);
-        const width = 1000;
-        const height = 600;
-        const imageUrl = `https://picsum.photos/seed/${seed}/${width}/${height}`;
+        // Try to generate an image using the experimental API
+        console.log("DEBUG: Attempting to use Gemini image generation...");
         
-        console.log(`DEBUG: Using LoremPicsum with seed "${seed}" derived from keywords: ${keywords}`);
-        return imageUrl;
-      } catch (error) {
-        console.error("Error generating LoremPicsum URL:", error);
-        throw error;
+        // Code based on https://ai.google.dev/gemini-api/docs/image-generation#javascript
+        const result = await imageModel.generateContent({
+          contents: [
+            {
+              role: "user",
+              parts: [
+                { text: `Generate an image for the following prompt: ${prompt}. 
+                Create a visually striking and high-quality image that accurately represents the prompt.` }
+              ]
+            }
+          ],
+          generationConfig: {
+            temperature: 0.8,
+            topK: 32,
+            topP: 1,
+            maxOutputTokens: 2048,
+          }
+        });
+        
+        const response = await result.response;
+        const responseText = response.text();
+        console.log("DEBUG: Gemini image generation response:", responseText);
+        
+        // Example response: "I can't generate that image for you right now"
+        if (responseText.toLowerCase().includes("can't generate") || 
+            responseText.toLowerCase().includes("cannot generate") ||
+            responseText.toLowerCase().includes("unable to generate")) {
+          console.log("DEBUG: Gemini image generation not available, falling back to keyword extraction");
+          // Fall back to keyword extraction and Picsum if image generation is not available
+          return await generateImageWithKeywords(prompt, genAI);
+        }
+        
+        // If we reach here, we should have an image URL or Base64 data in the response
+        // Attempt to extract image URL from response
+        const urlMatch = responseText.match(/https?:\/\/\S+\.(jpg|jpeg|png|gif|webp)/i);
+        if (urlMatch) {
+          const imageUrl = urlMatch[0];
+          console.log("DEBUG: Extracted image URL from Gemini response:", imageUrl);
+          return imageUrl;
+        }
+        
+        // Check for base64 data
+        const base64Match = responseText.match(/data:image\/(jpeg|png|gif|webp);base64,[A-Za-z0-9+/=]+/);
+        if (base64Match) {
+          const base64Data = base64Match[0];
+          console.log("DEBUG: Extracted base64 image data from Gemini response");
+          return base64Data;
+        }
+        
+        // If we couldn't extract a usable image, fall back to keyword extraction
+        console.log("DEBUG: Could not extract image URL or data from Gemini response, falling back to keyword extraction");
+        return await generateImageWithKeywords(prompt, genAI);
+        
+      } catch (imageGenError) {
+        console.error("Error using Gemini image generation:", imageGenError);
+        console.log("DEBUG: Falling back to keyword extraction method");
+        return await generateImageWithKeywords(prompt, genAI);
       }
     } catch (apiError) {
       console.error("API error, falling back to placeholder:", apiError);
@@ -86,6 +93,66 @@ export async function generateImage(prompt: string): Promise<string> {
   } catch (error) {
     console.error("Error in image generation:", error);
     return generatePlaceholderImage(prompt);
+  }
+}
+
+// Helper function to generate an image using keyword extraction and Picsum
+async function generateImageWithKeywords(prompt: string, genAI: any): Promise<string> {
+  try {
+    // Get the model - using gemini-2.0-flash
+    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+    
+    // Create the prompt for keyword extraction
+    const promptText = `Extract exactly 5 specific and descriptive keywords from this prompt that would be most useful for finding a striking, relevant image: "${prompt}". 
+    Return ONLY a comma-separated list of keywords, with no additional text, explanation or formatting.`;
+    
+    // Configuration for generation
+    const generationConfig = {
+      temperature: 0.1,
+      maxOutputTokens: 50,
+      topP: 0.8,
+      topK: 10
+    };
+    
+    console.log("DEBUG: Calling Gemini API for keyword extraction...");
+    
+    // Generate content with Gemini
+    const result = await model.generateContent({
+      contents: [{ role: "user", parts: [{ text: promptText }] }],
+      generationConfig
+    });
+    
+    // Get the response
+    const response = result.response;
+    console.log("DEBUG: Received keyword extraction response from Gemini API");
+    
+    // Extract the text content
+    let keywords = prompt; // Default to original prompt if extraction fails
+    
+    if (response && response.text) {
+      const text = response.text();
+      if (text) {
+        keywords = text.trim();
+        console.log(`DEBUG: Successfully extracted keywords: ${keywords}`);
+      } else {
+        console.log("DEBUG: Empty response text from Gemini API");
+      }
+    } else {
+      console.log("DEBUG: Could not extract text from Gemini API response");
+    }
+    
+    // Use Picsum to generate a random image
+    // Create a unique seed from the keywords to get consistent but varied images
+    const seed = createSeedFromKeywords(keywords);
+    const width = 1000;
+    const height = 600;
+    const imageUrl = `https://picsum.photos/seed/${seed}/${width}/${height}`;
+    
+    console.log(`DEBUG: Using LoremPicsum with seed "${seed}" derived from keywords: ${keywords}`);
+    return imageUrl;
+  } catch (error) {
+    console.error("Error in keyword extraction:", error);
+    throw error;
   }
 }
 

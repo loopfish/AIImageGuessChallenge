@@ -662,7 +662,13 @@ async function handleEndGame(gameId: number, storage: IStorage) {
     // Send game state to all clients
     sendGameState(gameId, storage);
     
-    console.log(`Game ${gameId} has ended`);
+    // Send a game_reset message to all clients to redirect them to the home page
+    sendToGame(gameId, {
+      type: GameMessageType.GAME_RESET,
+      payload: { message: "Game has ended. Returning to home page." }
+    });
+    
+    console.log(`Game ${gameId} has ended, sent reset message to all clients`);
   } catch (error) {
     console.error("Error ending game:", error);
   }

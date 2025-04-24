@@ -16,7 +16,7 @@ import {
   InsertGuess,
   RoundResult,
 } from "@shared/schema";
-import { generateImage } from "./gemini";
+import { generateImage } from "./gemini-image";
 import { 
   matchWords, 
   calculateGuessScore, 

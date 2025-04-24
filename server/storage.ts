@@ -63,6 +63,9 @@ export class MemStorage implements IStorage {
   // Serialization interval in milliseconds
   private static readonly SAVE_INTERVAL = 10000; // 10 seconds
   private saveInterval: NodeJS.Timeout | null = null;
+  
+  // Import the fs module once at the start
+  private static fsPromises: any = null;
 
   constructor() {
     this.users = new Map();
@@ -80,20 +83,30 @@ export class MemStorage implements IStorage {
     this.resultIdCounter = 1;
     
     // Try to load data from disk
-    this.loadFromDisk();
+    (async () => {
+      try {
+        await this.loadFromDisk();
+      } catch (error) {
+        console.error('Error loading data during initialization:', error);
+      }
+    })();
     
     // Setup periodic saving
-    this.saveInterval = setInterval(() => {
-      this.saveToDisk();
+    this.saveInterval = setInterval(async () => {
+      try {
+        await this.saveToDisk();
+      } catch (error) {
+        console.error('Error in periodic save:', error);
+      }
     }, MemStorage.SAVE_INTERVAL);
   }
   
   /**
    * Save the current state to disk
    */
-  private saveToDisk(): void {
+  private async saveToDisk(): Promise<void> {
     try {
-      const fs = require('fs');
+      const fs = await import('fs/promises');
       
       const data = {
         users: Array.from(this.users.entries()),
@@ -112,7 +125,7 @@ export class MemStorage implements IStorage {
         }
       };
       
-      fs.writeFileSync(MemStorage.STORAGE_FILE, JSON.stringify(data, null, 2));
+      await fs.writeFile(MemStorage.STORAGE_FILE, JSON.stringify(data, null, 2));
       console.log('Game data saved to disk');
     } catch (error) {
       console.error('Failed to save data to disk:', error);
@@ -122,16 +135,20 @@ export class MemStorage implements IStorage {
   /**
    * Load state from disk
    */
-  private loadFromDisk(): void {
+  private async loadFromDisk(): Promise<void> {
     try {
-      const fs = require('fs');
+      // Import fs modules using ESM
+      const fsPromises = await import('fs/promises');
       
-      if (!fs.existsSync(MemStorage.STORAGE_FILE)) {
+      try {
+        // Try to access the file - if it doesn't exist, this will throw an error
+        await fsPromises.access(MemStorage.STORAGE_FILE);
+      } catch (err) {
         console.log('No saved data found, starting with empty database');
         return;
       }
       
-      const rawData = fs.readFileSync(MemStorage.STORAGE_FILE, 'utf8');
+      const rawData = await fsPromises.readFile(MemStorage.STORAGE_FILE, 'utf8');
       const data = JSON.parse(rawData);
       
       // Restore maps

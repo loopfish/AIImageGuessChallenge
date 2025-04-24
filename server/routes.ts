@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { WebSocketServer } from "ws";
 import { setupWebsocketHandlers } from "./websocket";
+import { generateImage } from "./gemini";
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -30,6 +31,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // API routes
   app.get("/api/health", async (_req, res) => {
     res.json({ status: "ok" });
+  });
+  
+  // Generate image API endpoint
+  app.post("/api/generate-image", async (req, res) => {
+    try {
+      // Validate the request body
+      const promptSchema = z.object({
+        prompt: z.string().min(1).max(500)
+      });
+      
+      const parseResult = promptSchema.safeParse(req.body);
+      
+      if (!parseResult.success) {
+        return res.status(400).json({ 
+          message: "Invalid request body", 
+          errors: parseResult.error.format() 
+        });
+      }
+      
+      const { prompt } = parseResult.data;
+      console.log(`Generating image for prompt: "${prompt}"`);
+      
+      // Generate the image using Gemini
+      const imageUrl = await generateImage(prompt);
+      
+      // Return the image URL to the client
+      return res.json({ imageUrl });
+    } catch (error) {
+      console.error("Error generating image:", error);
+      return res.status(500).json({ message: "Failed to generate image" });
+    }
   });
 
   // Get game by code

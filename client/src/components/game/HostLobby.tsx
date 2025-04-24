@@ -28,7 +28,7 @@ export default function HostLobby() {
   console.log("Current Player ID:", gameState?.currentPlayerId);
   console.log("Game Players:", gameState?.players);
   
-  const handleGenerateImage = () => {
+  const handleGenerateImage = async () => {
     if (!prompt.trim()) {
       toast({
         title: "Error",
@@ -39,12 +39,47 @@ export default function HostLobby() {
     }
     
     setGenerating(true);
-    // In a real app we would generate an image here
-    // But for now we just simulate it
-    setTimeout(() => {
+    
+    try {
+      // Make a real API call to generate the image
+      const response = await fetch("/api/generate-image", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ prompt })
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to generate image: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      if (data.imageUrl) {
+        // Store the generated image URL in the game state
+        // We'll store it temporarily in the component, the actual URL will be set
+        // in the round object when the game starts
+        setGenerating(false);
+        setImageGenerated(true);
+        
+        console.log("Generated image URL:", data.imageUrl);
+        
+        // No need to set the image URL here as it will be handled by the server
+        // when the game starts
+      } else {
+        throw new Error("No image URL in the response");
+      }
+    } catch (error) {
+      console.error("Error generating image:", error);
+      toast({
+        title: "Error",
+        description: "Failed to generate the image. Please try again.",
+        variant: "destructive"
+      });
       setGenerating(false);
-      setImageGenerated(true);
-    }, 1500);
+      // Don't set imageGenerated to true on error
+    }
   };
   
   const handleStartGame = () => {

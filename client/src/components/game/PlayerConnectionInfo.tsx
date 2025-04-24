@@ -31,10 +31,7 @@ export function PlayerConnectionInfo() {
     }
   }, [actualClientId]);
 
-  // Always show something if we are connected to the game server
-  // This is crucial for showing connection info during joining
-  if (!isConnected) return null;
-  
+  // Log component rendering for debugging
   console.log("PlayerConnectionInfo component rendering:", {
     gameState,
     currentPlayer,
@@ -44,6 +41,33 @@ export function PlayerConnectionInfo() {
   
   // Check for the special isConnecting flag or if we don't have player data yet
   const isConnecting = Boolean(gameState?.isConnecting) || (!currentPlayer && isConnected);
+  
+  // If we're not connected at all, show a disconnected state
+  if (!isConnected) {
+    return (
+      <Card className="overflow-hidden bg-white/50 backdrop-blur-sm border-red-200">
+        <CardHeader className="p-3 bg-gradient-to-r from-red-50 to-red-100">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-sm font-medium text-red-800 flex items-center">
+              <WifiIcon className="h-4 w-4 mr-1 text-red-600" />
+              Disconnected
+            </CardTitle>
+          </div>
+          <CardDescription className="text-xs text-red-700">
+            Not connected to game server
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="p-3 text-xs">
+          <div className="flex flex-col space-y-1">
+            <div className="flex items-center text-red-600">
+              <CircleIcon className="h-2 w-2 mr-1" />
+              <span>Waiting for connection...</span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
   
   // If we're connecting or no currentPlayer is found but we're connected, show a connecting state
   if (isConnecting) {
@@ -79,9 +103,38 @@ export function PlayerConnectionInfo() {
     );
   }
 
-  // Safety check - currentPlayer should be defined at this point
-  if (!currentPlayer) return null;
+  // Safety check - currentPlayer should be defined at this point,
+  // but if not, show a fallback view
+  if (!currentPlayer) {
+    return (
+      <Card className="overflow-hidden bg-white/50 backdrop-blur-sm border-blue-200">
+        <CardHeader className="p-3 bg-gradient-to-r from-blue-50 to-blue-100">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-sm font-medium text-blue-800 flex items-center">
+              <WifiIcon className="h-4 w-4 mr-1 text-blue-600" />
+              Connected
+            </CardTitle>
+            <Badge variant="outline" className="bg-blue-100 text-blue-800 hover:bg-blue-200">
+              {gameState?.game?.code || ""}
+            </Badge>
+          </div>
+          <CardDescription className="text-xs text-blue-700">
+            Connected to game server
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="p-3 text-xs">
+          <div className="flex flex-col space-y-1">
+            <div className="flex items-center text-blue-600">
+              <CircleIcon className="h-2 w-2 mr-1" />
+              <span>Waiting for player data...</span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
+  // Regular connected view with player info
   return (
     <Card className="overflow-hidden bg-white/50 backdrop-blur-sm border-green-200">
       <CardHeader className="p-3 bg-gradient-to-r from-green-50 to-green-100">

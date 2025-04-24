@@ -6,6 +6,7 @@ import HostLobby from "@/components/game/HostLobby";
 import GamePlay from "@/components/game/GamePlay";
 import ResultsScreen from "@/components/game/ResultsScreen";
 import ConnectionDebug from "@/components/debug/ConnectionDebug";
+import { GameLayout } from "@/components/layout/GameLayout";
 import { Loader2 } from "lucide-react";
 import { GameState, WebSocketMessage, GameMessageType } from "@shared/schema";
 
@@ -383,9 +384,11 @@ export default function Game() {
   };
   
   return (
-    <div className="game-container">
-      {renderGameView()}
-      <ConnectionDebug />
-    </div>
+    <GameLayout>
+      <div className="game-container">
+        {renderGameView()}
+        <ConnectionDebug />
+      </div>
+    </GameLayout>
   );
 }

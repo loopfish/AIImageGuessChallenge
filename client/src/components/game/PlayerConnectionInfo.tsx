@@ -31,13 +31,22 @@ export function PlayerConnectionInfo() {
     }
   }, [actualClientId]);
 
+  // Always show something if we are connected to the game server
+  // This is crucial for showing connection info during joining
   if (!isConnected) return null;
   
-  // Check for the special isConnecting flag
-  const isConnecting = Boolean((gameState as any)?.isConnecting);
+  console.log("PlayerConnectionInfo component rendering:", {
+    gameState,
+    currentPlayer,
+    isConnected,
+    onlinePlayers
+  });
+  
+  // Check for the special isConnecting flag or if we don't have player data yet
+  const isConnecting = Boolean(gameState?.isConnecting) || (!currentPlayer && isConnected);
   
   // If we're connecting or no currentPlayer is found but we're connected, show a connecting state
-  if ((gameState as any)?.isConnecting || (!currentPlayer && isConnected)) {
+  if (isConnecting) {
     return (
       <Card className="overflow-hidden bg-white/50 backdrop-blur-sm border-amber-200">
         <CardHeader className="p-3 bg-gradient-to-r from-amber-50 to-amber-100">

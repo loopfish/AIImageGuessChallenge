@@ -113,12 +113,14 @@ export default function HostLobby() {
     }
     
     console.log(`Starting game with ID: ${gameState.game.id} and prompt: ${prompt}`);
+    console.log(`Using pre-generated image URL: ${previewImageUrl}`);
     
     socket.send(JSON.stringify({
       type: GameMessageType.START_GAME,
       payload: {
         gameId: gameState.game.id,
-        prompt: prompt
+        prompt: prompt,
+        imageUrl: previewImageUrl
       }
     }));
   };

@@ -585,6 +585,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     error,
     socket: socketRef.current,
     isConnected,
+    clientId, // Include the clientId in the context
     connectWebSocket,
     setGameState
   };

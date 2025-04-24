@@ -55,9 +55,6 @@ export default function GamePlay() {
       return;
     }
     
-    // Get client ID from context (for improved player identification)
-    const { clientId } = useGameContext();
-    
     console.log(`Submitting guess as ${currentPlayer.username} (ID: ${currentPlayer.id}, Client ID: ${clientId})`);
     
     // Send the guess to the server with explicit player identification information

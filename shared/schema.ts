@@ -281,3 +281,10 @@ export interface PlayersOnlineUpdateMessage extends WebSocketMessage {
     onlinePlayers: number[]; // Array of player IDs that are currently online
   };
 }
+
+export interface WelcomeMessage extends WebSocketMessage {
+  type: GameMessageType.WELCOME;
+  payload: {
+    message: string;
+  };
+}

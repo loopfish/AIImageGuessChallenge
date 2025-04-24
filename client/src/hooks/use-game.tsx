@@ -82,7 +82,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
       // Handle different message types
       switch (message.type) {
         // Handle welcome message from server
-        case "welcome":
+        case GameMessageType.WELCOME:
           console.log("Connected to server:", message.payload.message);
           // No state changes needed for the welcome message
           break;

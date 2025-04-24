@@ -10,6 +10,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { testGeminiImageGeneration } from "./test-gemini-image";
 import { renderTestPage } from "./test-page";
 import { testImageGeneration } from "./api-test";
+import { renderFixedTestPage } from "./fixed-test-page";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
@@ -89,6 +90,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error creating test game:", error);
       return res.status(500).json({ success: false, message: "Failed to create test game" });
+    }
+  });
+  
+  // Test route to join a game with predictable code
+  app.get("/api/test/join-game", async (req, res) => {
+    try {
+      const gameCode = "TESTGAME"; // Fixed game code for testing
+      const username = req.query.username?.toString() || "TestPlayer";
+      
+      // Check if the game exists
+      const game = await storage.getGameByCode(gameCode);
+      if (!game) {
+        return res.status(404).json({
+          success: false,
+          message: `Game with code ${gameCode} not found. Please create it first.`
+        });
+      }
+      
+      // Create or get user
+      let user = await storage.getUserByUsername(username);
+      if (!user) {
+        user = await storage.createUser({ username, password: "placeholder" });
+      }
+      
+      // Check if user is already in the game
+      const existingPlayer = await storage.getPlayerByGameAndUser(game.id, user.id);
+      let player;
+      
+      if (existingPlayer) {
+        // Update player to active
+        player = await storage.updatePlayer(existingPlayer.id, { isActive: true });
+        console.log(`Existing player ${existingPlayer.username} updated to active for game ${gameCode}`);
+      } else {
+        // Create new player
+        player = await storage.createPlayer({
+          gameId: game.id,
+          userId: user.id,
+          username,
+          score: 0,
+          isHost: false,
+          isActive: true
+        });
+        console.log(`Test player ${username} joined game ${gameCode}`);
+      }
+      
+      return res.json({
+        success: true,
+        message: `Successfully joined game ${gameCode} as ${username}`,
+        gameCode,
+        playerId: player.id
+      });
+    } catch (error) {
+      console.error("Error joining test game:", error);
+      return res.status(500).json({ success: false, message: "Failed to join test game" });
     }
   });
   
@@ -280,21 +335,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
             
             try {
-              const response = await fetch(\`/api/test/create-game?username=\${encodeURIComponent(username)}\`);
+              const response = await fetch('/api/test/create-game?username=' + encodeURIComponent(username));
               const data = await response.json();
               
               if (data.success) {
                 document.getElementById('result').classList.remove('hidden');
               } else {
-                alert(\`Error: \${data.message}\`);
+                alert('Error: ' + data.message);
               }
             } catch (error) {
-              alert(\`Failed to create game: \${error.message}\`);
+              alert('Failed to create game: ' + error.message);
             }
           });
           
-          document.getElementById('join-game').addEventListener('click', () => {
-            window.location.href = '/#/join/TESTGAME';
+          document.getElementById('join-game').addEventListener('click', async () => {
+            const username = document.getElementById('username').value;
+            
+            if (!username) {
+              alert('Please enter a username');
+              return;
+            }
+            
+            try {
+              // First call the join test endpoint
+              const response = await fetch('/api/test/join-game?username=' + encodeURIComponent(username));
+              const data = await response.json();
+              
+              if (data.success) {
+                // Then redirect to the game join page
+                window.location.href = '/#/join/TESTGAME';
+              } else {
+                alert('Error: ' + data.message);
+              }
+            } catch (error) {
+              alert('Failed to join game: ' + error.message);
+            }
           });
           
           document.getElementById('go-to-game').addEventListener('click', () => {

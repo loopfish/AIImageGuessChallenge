@@ -116,13 +116,23 @@ export default function GamePlay() {
     setHasSubmitted(true);
   };
   
+  // Log the game state for debugging
+  console.log("GamePlay component rendering with state:", {
+    gameState,
+    currentPlayer,
+    hasSubmitted,
+    canSubmitGuess
+  });
+
   return (
     <div className="game-play">
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
         {/* Left Column (Narrow) - Game Status & Players */}
         <div className="lg:col-span-1 space-y-6">
-          {/* Player Connection Info */}
-          <PlayerConnectionInfo />
+          {/* Player Connection Info - Always render with forced visibility */}
+          <div className="player-connection-container" style={{display: 'block', visibility: 'visible'}}>
+            <PlayerConnectionInfo />
+          </div>
           
           {/* Round Info */}
           <div className="bg-white rounded-xl shadow-md p-4">

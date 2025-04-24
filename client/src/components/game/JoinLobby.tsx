@@ -92,10 +92,21 @@ export default function JoinLobby() {
   // Show connection info if either:
   // 1. Player has already joined a game with a player ID
   // 2. Player is in connecting state during join process
+  // Always include player connection info in any state
+  console.log("JoinLobby component rendering with state:", {
+    gameState,
+    isConnected,
+    isJoining
+  });
+  
+  // Show connected state if player is connected
   if ((gameState?.currentPlayerId || gameState?.isConnecting) && isConnected) {
     return (
       <div className="max-w-md mx-auto space-y-4">
-        <PlayerConnectionInfo />
+        {/* Player Connection Info - Always render with forced visibility */}
+        <div className="player-connection-container" style={{display: 'block', visibility: 'visible'}}>
+          <PlayerConnectionInfo />
+        </div>
         
         <Card>
           <CardHeader>
@@ -122,44 +133,53 @@ export default function JoinLobby() {
   }
   
   return (
-    <Card className="max-w-md mx-auto">
-      <CardHeader>
-        <h2 className="text-2xl font-heading font-semibold text-center">Join a Game</h2>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="username">Your Name</Label>
-            <Input
-              id="username"
-              placeholder="Enter your name"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              required
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="gameCode">Game Code</Label>
-            <Input
-              id="gameCode"
-              placeholder="Enter the game code"
-              value={gameCode}
-              onChange={(e) => setGameCode(e.target.value.toUpperCase())}
-              required
-            />
-            <p className="text-sm text-gray-500">Ask the game host for the code</p>
-          </div>
-          
-          <Button 
-            type="submit" 
-            disabled={isJoining} 
-            className="w-full"
-          >
-            {isJoining ? "Joining..." : "Join Game"}
-          </Button>
-        </form>
-      </CardContent>
-    </Card>
+    <div className="max-w-md mx-auto space-y-4">
+      {/* Always show connection info if available */}
+      {isConnected && (
+        <div className="player-connection-container" style={{display: 'block', visibility: 'visible'}}>
+          <PlayerConnectionInfo />
+        </div>
+      )}
+      
+      <Card>
+        <CardHeader>
+          <h2 className="text-2xl font-heading font-semibold text-center">Join a Game</h2>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="username">Your Name</Label>
+              <Input
+                id="username"
+                placeholder="Enter your name"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                required
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="gameCode">Game Code</Label>
+              <Input
+                id="gameCode"
+                placeholder="Enter the game code"
+                value={gameCode}
+                onChange={(e) => setGameCode(e.target.value.toUpperCase())}
+                required
+              />
+              <p className="text-sm text-gray-500">Ask the game host for the code</p>
+            </div>
+            
+            <Button 
+              type="submit" 
+              disabled={isJoining} 
+              className="w-full"
+            >
+              {isJoining ? "Joining..." : "Join Game"}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
   );
 }

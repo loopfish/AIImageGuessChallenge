@@ -118,8 +118,32 @@ export function setupWebsocketHandlers(wss: WebSocketServer, storage: IStorage) 
     // Handle client disconnection
     socket.on("close", () => {
       const client = clients.get(clientId);
+      
       if (client && client.gameId && client.playerId) {
-        handlePlayerDisconnect(clientId, client.gameId, client.playerId, storage);
+        // Don't immediately mark player as inactive, keep them in the game
+        // They might be refreshing or accidentally closed the tab
+        console.log(`Client ${clientId} disconnected but keeping player active in game ${client.gameId}`);
+        
+        // We'll still remove the client from the active clients map
+        // but we won't mark the player as inactive in the database
+        
+        // After 60 seconds, if they haven't reconnected, then mark as inactive
+        setTimeout(async () => {
+          try {
+            // Check if this player is still disconnected
+            const isReconnected = Array.from(clients.values()).some(c => 
+              c.playerId === client.playerId && c.gameId === client.gameId
+            );
+            
+            // If they haven't reconnected, then mark as inactive
+            if (!isReconnected && client.gameId && client.playerId) {
+              console.log(`Player ${client.playerId} did not reconnect after 60s, marking inactive`);
+              await handlePlayerDisconnect(clientId, client.gameId, client.playerId, storage);
+            }
+          } catch (error) {
+            console.error("Error in delayed player disconnect handler:", error);
+          }
+        }, 60000); // 60 second grace period
       }
       
       // Remove client from our maps
@@ -821,24 +845,28 @@ async function handlePlayerReconnect(clientId: string, payload: any, storage: IS
     let gameId = payload.gameId;
     let playerId = payload.playerId;
     const gameCode = payload.gameCode;
+    const username = payload.username;
     
-    // If we have a game code but no gameId, look up the game
-    if (!gameId && gameCode) {
+    // Log to make debugging easier
+    console.log(`Reconnection data: gameId=${gameId}, playerId=${playerId}, gameCode=${gameCode}, username=${username}`);
+    
+    // Prioritize game code for reconnection as it's most reliable across devices
+    if (gameCode) {
       console.log(`Looking up game by code: ${gameCode}`);
       const game = await storage.getGameByCode(gameCode);
       if (game) {
         gameId = game.id;
-        console.log(`Found game ${gameId} for code ${gameCode}`);
+        console.log(`Found game ${gameId} for code ${gameCode}, status: ${game.status}`);
+        
+        // If game is ended or complete, tell client so they can show appropriate UI
+        if (game.status === "ended" || game.status === "completed") {
+          console.log(`Game ${gameCode} is already ${game.status}`);
+          return sendErrorToClient(clientId, `Game with code ${gameCode} has already ended.`);
+        }
       } else {
         console.error(`Game with code ${gameCode} not found`);
         return sendErrorToClient(clientId, `Game with code ${gameCode} not found. Please create a new game.`);
       }
-    }
-    
-    // At this point we need a gameId or playerId at minimum
-    if (!gameId && !playerId) {
-      console.error("Invalid reconnection request - can't determine game or player");
-      return sendErrorToClient(clientId, "Invalid reconnection request. Insufficient information to reconnect.");
     }
     
     // If we have a playerId but no gameId, look up the player's game
@@ -864,41 +892,61 @@ async function handlePlayerReconnect(clientId: string, payload: any, storage: IS
       return sendErrorToClient(clientId, "Game not found. Please create a new game.");
     }
     
-    // If we know the player, verify they exist
+    // Now try to find or create a player for this client
     let player = null;
+    
+    // First attempt: use the provided player ID if valid
     if (playerId) {
       player = await storage.getPlayer(playerId);
-      if (!player) {
-        console.error(`Player ${playerId} not found during reconnection attempt`);
-        playerId = null; // Reset so we can assign a new player below
+      if (player) {
+        // Verify this player belongs to the game we found
+        if (player.gameId !== gameId) {
+          console.error(`Player ${playerId} belongs to game ${player.gameId}, not ${gameId}`);
+          player = null; // Reset so we can try other methods
+        } else {
+          console.log(`Found player ${player.username} (${playerId}) for game ${game.code}`);
+        }
+      } else {
+        console.log(`Player ID ${playerId} not found, will try username`);
       }
     }
     
-    // If no valid player was found but we have a game, try to get a player from username or create a new one
-    if (!player && payload.username) {
-      // First try to find an existing player with this username
+    // Second attempt: use the username to find an existing player in this game
+    if (!player && username) {
       const players = await storage.getPlayersByGameId(gameId);
-      const existingPlayer = players.find(p => p.username === payload.username);
+      console.log(`Found ${players.length} players in game ${game.code}`);
       
+      const existingPlayer = players.find(p => p.username.toLowerCase() === username.toLowerCase());
       if (existingPlayer) {
         player = existingPlayer;
         playerId = existingPlayer.id;
         console.log(`Found existing player ${existingPlayer.username} (${existingPlayer.id}) for reconnection`);
       } else {
-        // Create a new player in the game
-        const newPlayer = await storage.createPlayer({
-          gameId,
-          userId: Date.now(), // Generate temporary user ID
-          username: payload.username,
-          score: 0,
-          isHost: false,
-          isActive: true
-        });
-        
-        player = newPlayer;
-        playerId = newPlayer.id;
-        console.log(`Created new player ${newPlayer.username} (${newPlayer.id}) for game ${game.code}`);
+        console.log(`No player found with username ${username} in game ${game.code}`);
       }
+    }
+    
+    // Third attempt: create a new player if we have a username
+    if (!player && username) {
+      // Create a new user or get existing one
+      let user = await storage.getUserByUsername(username);
+      if (!user) {
+        user = await storage.createUser({ username, password: "placeholder" });
+      }
+      
+      // Create a new player in the game
+      const newPlayer = await storage.createPlayer({
+        gameId,
+        userId: user.id,
+        username: user.username,
+        score: 0,
+        isHost: false,
+        isActive: true
+      });
+      
+      player = newPlayer;
+      playerId = newPlayer.id;
+      console.log(`Created new player ${newPlayer.username} (${newPlayer.id}) for game ${game.code}`);
     }
     
     // If we still have no player, we can't proceed
@@ -909,10 +957,8 @@ async function handlePlayerReconnect(clientId: string, payload: any, storage: IS
     
     console.log(`Reconnecting player ${player.username} (${playerId}) to game ${game.code} (${gameId})`);
     
-    // Update player to active if needed
-    if (!player.isActive) {
-      await storage.updatePlayer(playerId, { isActive: true });
-    }
+    // Update player to active
+    await storage.updatePlayer(playerId, { isActive: true });
     
     // Store client association with game and player
     const client = clients.get(clientId);
@@ -937,10 +983,18 @@ async function handlePlayerReconnect(clientId: string, payload: any, storage: IS
         payload: { 
           message: "Reconnection successful",
           playerId,
-          gameId
+          gameId,
+          gameCode: game.code
         }
       }));
     }
+    
+    // Send updated player list to all clients in the game
+    const players = await storage.getPlayersByGameId(game.id);
+    sendToGame(game.id, {
+      type: GameMessageType.PLAYER_UPDATE,
+      payload: { players }
+    });
     
     // Send complete game state to the reconnected client
     sendGameStateToClient(clientId, gameId, storage);

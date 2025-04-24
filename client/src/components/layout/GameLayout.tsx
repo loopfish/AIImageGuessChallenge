@@ -24,28 +24,19 @@ export function GameLayout({ children, showConnectionInfo = true }: GameLayoutPr
 
   return (
     <div className="game-layout relative">
-      {/* Connection panel in top right corner */}
-      {showConnectionInfo && (
-        <div 
-          className="connection-panel-container"
-          style={{
-            display: 'block', 
-            visibility: 'visible',
-            position: 'fixed',
-            top: '16px',
-            right: '16px',
-            maxWidth: '260px',
-            zIndex: 50
-          }}
-          data-force-display="true"
-        >
-          <PlayerConnectionInfo compact={true} />
+      {/* Main layout with sidebar for connection info */}
+      <div className="flex">
+        {/* Connection panel as a side panel */}
+        {showConnectionInfo && (
+          <div className="connection-panel-container w-72 p-4 shrink-0">
+            <PlayerConnectionInfo compact={false} />
+          </div>
+        )}
+        
+        {/* Main content */}
+        <div className="game-layout-content flex-1 p-4">
+          {children}
         </div>
-      )}
-      
-      {/* Main content */}
-      <div className="game-layout-content pt-2">
-        {children}
       </div>
     </div>
   );

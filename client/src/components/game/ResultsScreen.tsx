@@ -3,12 +3,12 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Loader2, Clock } from "lucide-react";
+import { Loader2, Clock, Zap } from "lucide-react";
 import { useGameContext } from "@/hooks/use-game";
 import { GameMessageType } from "@shared/schema";
 import WordMatch from "./WordMatch";
 import { useToast } from "@/hooks/use-toast";
-import { format } from "date-fns";
+import { format, differenceInSeconds } from "date-fns";
 
 interface PlayerWithMatchedWords {
   id: number;
@@ -16,7 +16,8 @@ interface PlayerWithMatchedWords {
   matchedWords: string[];
   place: number;
   points: number;
-  submittedAt?: Date; // Add submission timestamp
+  submittedAt?: Date; // Submission timestamp
+  submissionSpeed?: number; // Submission speed in seconds
 }
 
 export default function ResultsScreen() {
@@ -76,36 +77,55 @@ export default function ResultsScreen() {
   // Player results to display
   const playerResults: PlayerWithMatchedWords[] = [];
   
+  // Calculate submission times relative to round start
+  // Assume the round start time is the time when the round was started (or now if not available)
+  const roundStartTime = currentRound.startTime ? new Date(currentRound.startTime) : new Date();
+  
   if (firstPlace && firstPlaceGuess) {
+    const submittedAt = firstPlaceGuess.submittedAt ? new Date(firstPlaceGuess.submittedAt) : undefined;
+    // Calculate speed if timestamp exists
+    const submissionSpeed = submittedAt ? differenceInSeconds(submittedAt, roundStartTime) : undefined;
+    
     playerResults.push({
       id: firstPlace.id,
       username: firstPlace.username,
       matchedWords: firstPlaceGuess.matchedWords || [],
       place: 1,
       points: 3,
-      submittedAt: firstPlaceGuess.submittedAt ? new Date(firstPlaceGuess.submittedAt) : undefined
+      submittedAt,
+      submissionSpeed
     });
   }
   
   if (secondPlace && secondPlaceGuess) {
+    const submittedAt = secondPlaceGuess.submittedAt ? new Date(secondPlaceGuess.submittedAt) : undefined;
+    // Calculate speed if timestamp exists
+    const submissionSpeed = submittedAt ? differenceInSeconds(submittedAt, roundStartTime) : undefined;
+    
     playerResults.push({
       id: secondPlace.id,
       username: secondPlace.username,
       matchedWords: secondPlaceGuess.matchedWords || [],
       place: 2,
       points: 2,
-      submittedAt: secondPlaceGuess.submittedAt ? new Date(secondPlaceGuess.submittedAt) : undefined
+      submittedAt,
+      submissionSpeed
     });
   }
   
   if (thirdPlace && thirdPlaceGuess) {
+    const submittedAt = thirdPlaceGuess.submittedAt ? new Date(thirdPlaceGuess.submittedAt) : undefined;
+    // Calculate speed if timestamp exists
+    const submissionSpeed = submittedAt ? differenceInSeconds(submittedAt, roundStartTime) : undefined;
+    
     playerResults.push({
       id: thirdPlace.id,
       username: thirdPlace.username,
       matchedWords: thirdPlaceGuess.matchedWords || [],
       place: 3,
       points: 1,
-      submittedAt: thirdPlaceGuess.submittedAt ? new Date(thirdPlaceGuess.submittedAt) : undefined
+      submittedAt,
+      submissionSpeed
     });
   }
   
@@ -290,11 +310,11 @@ export default function ResultsScreen() {
                       </span>
                     </div>
                     
-                    {/* Time of submission */}
-                    {result.submittedAt && (
+                    {/* Speed of submission */}
+                    {result.submissionSpeed !== undefined && (
                       <div className="flex items-center text-xs text-gray-500 mb-2">
-                        <Clock className="h-3 w-3 mr-1" /> 
-                        <span>Submitted: {format(result.submittedAt, 'h:mm:ss a')}</span>
+                        <Zap className="h-3 w-3 mr-1" /> 
+                        <span>Response time: {result.submissionSpeed} {result.submissionSpeed === 1 ? 'second' : 'seconds'}</span>
                       </div>
                     )}
                     

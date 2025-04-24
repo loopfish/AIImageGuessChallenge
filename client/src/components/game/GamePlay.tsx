@@ -10,6 +10,7 @@ import WordMatch from "./WordMatch";
 import PlayerGuesses from "./PlayerGuesses";
 import { PlayerConnectionInfo } from "./PlayerConnectionInfo";
 import { GameMessageType } from "@shared/schema";
+import { CrownIcon } from "lucide-react";
 
 export default function GamePlay() {
   const { gameState, socket } = useGameContext();
@@ -19,6 +20,13 @@ export default function GamePlay() {
   
   const currentRound = gameState?.currentRound;
   const currentPlayer = gameState?.players?.find(p => p.id === gameState.currentPlayerId);
+  
+  // Determine if current player is the host
+  const isHost = currentPlayer?.isHost || false;
+  
+  // Check if player is allowed to guess
+  // Hosts cannot submit guesses in their own games to prevent cheating
+  const canSubmitGuess = !isHost || gameState?.game?.status === "round_end";
   
   // Keep track of which words the current player has matched
   const playerGuesses = gameState?.playerGuesses?.filter(g => g.playerId === currentPlayer?.id) || [];
@@ -121,24 +129,39 @@ export default function GamePlay() {
               <h3 className="text-xl font-heading font-medium text-neutral-dark mb-1">Guess the Prompt</h3>
               <p className="text-gray-600 text-sm">Try to match as many words from the original prompt as possible.</p>
               
-              <form onSubmit={handleSubmitGuess} className="mt-1 space-y-2">
-                <Textarea
-                  name="guess"
-                  id="guess"
-                  placeholder="Enter your guess..."
-                  value={guess}
-                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setGuess(e.target.value)}
-                  className="min-h-[80px] resize-y"
-                />
-                <div className="flex justify-end">
-                  <Button 
-                    type="submit"
-                    className="px-6"
-                  >
-                    Submit Guess
-                  </Button>
+              {isHost ? (
+                <div className="mt-6 mb-2 p-4 bg-amber-50 border border-amber-200 rounded-md">
+                  <h4 className="text-amber-800 font-medium flex items-center mb-1">
+                    <CrownIcon className="h-4 w-4 mr-1 text-amber-500" />
+                    Host Mode
+                  </h4>
+                  <p className="text-sm text-amber-700">
+                    As the host, you cannot submit guesses for your own game to keep things fair.
+                    You can still watch players' guesses and see their scores.
+                  </p>
                 </div>
-              </form>
+              ) : (
+                <form onSubmit={handleSubmitGuess} className="mt-1 space-y-2">
+                  <Textarea
+                    name="guess"
+                    id="guess"
+                    placeholder="Enter your guess..."
+                    value={guess}
+                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setGuess(e.target.value)}
+                    className="min-h-[80px] resize-y"
+                    disabled={!canSubmitGuess}
+                  />
+                  <div className="flex justify-end">
+                    <Button 
+                      type="submit"
+                      className="px-6"
+                      disabled={!canSubmitGuess}
+                    >
+                      Submit Guess
+                    </Button>
+                  </div>
+                </form>
+              )}
               
               {/* Only show matched words at the end of the round */}
               {allMatchedWords.length > 0 && (
@@ -155,12 +178,14 @@ export default function GamePlay() {
                       </div>
                     </>
                   ) : (
-                    <h4 className="text-sm font-medium text-gray-500">
-                      <span className="inline-flex items-center justify-center bg-purple-100 text-purple-800 rounded-full px-2 py-1 text-xs font-medium">
-                        {allMatchedWords.length} {allMatchedWords.length === 1 ? 'word' : 'words'} matched
-                      </span>
-                      <span className="ml-2">Words will be revealed at the end of the round</span>
-                    </h4>
+                    <div className="p-2 bg-purple-50 border border-purple-100 rounded-md">
+                      <h4 className="text-sm font-medium text-purple-700 flex items-center">
+                        <span className="inline-flex items-center justify-center bg-purple-100 text-purple-800 rounded-full px-2 py-1 text-xs font-medium mr-2">
+                          {allMatchedWords.length} {allMatchedWords.length === 1 ? 'word' : 'words'}
+                        </span>
+                        You've matched some words! Details will be revealed at the end of the round.
+                      </h4>
+                    </div>
                   )}
                 </div>
               )}

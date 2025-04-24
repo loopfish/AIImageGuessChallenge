@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useGameContext } from "@/hooks/use-game";
-import { UserIcon, WifiIcon } from "lucide-react";
+import { UserIcon, WifiIcon, CrownIcon } from "lucide-react";
 
 /**
  * Component that displays the current player's connection information
@@ -45,10 +45,21 @@ export function PlayerConnectionInfo() {
         <div className="flex flex-col space-y-1">
           <div className="flex justify-between items-center">
             <span className="font-semibold text-gray-600 flex items-center">
-              <UserIcon className="h-3 w-3 mr-1" />
-              Player:
+              {currentPlayer.isHost ? (
+                <CrownIcon className="h-3 w-3 mr-1 text-amber-500" />
+              ) : (
+                <UserIcon className="h-3 w-3 mr-1" />
+              )}
+              {currentPlayer.isHost ? "Host:" : "Player:"}
             </span>
-            <span className="text-gray-900">{currentPlayer.username}</span>
+            <div className="flex items-center gap-1">
+              <span className="text-gray-900">{currentPlayer.username}</span>
+              {currentPlayer.isHost && (
+                <Badge className="text-[0.6rem] px-1 py-0 h-4 bg-amber-100 text-amber-800 hover:bg-amber-200">
+                  HOST
+                </Badge>
+              )}
+            </div>
           </div>
           <div className="flex justify-between items-center">
             <span className="font-semibold text-gray-600">Client ID:</span>

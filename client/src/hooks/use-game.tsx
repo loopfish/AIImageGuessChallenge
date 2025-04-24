@@ -325,10 +325,13 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
           if (location.startsWith('/game/') && gameCode && gameCode !== 'lobby') {
             const playerId = getCurrentPlayerFromStorage();
             if (playerId) {
-              console.log(`Sending reconnection request for player ${playerId}`);
+              console.log(`Sending reconnection request for player ${playerId} in game ${gameCode}`);
               socket.send(JSON.stringify({
                 type: GameMessageType.RECONNECT_REQUEST,
-                payload: { playerId }
+                payload: { 
+                  playerId,
+                  gameCode // Always include the game code for proper game matching
+                }
               }));
             }
           }

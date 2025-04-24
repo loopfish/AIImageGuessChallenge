@@ -1,5 +1,6 @@
 import { useGameContext } from "@/hooks/use-game";
 import { useEffect, useState } from "react";
+import { GameMessageType } from "@shared/schema";
 
 export default function ConnectionDebug() {
   const { gameState, isConnected, socket } = useGameContext();
@@ -9,6 +10,7 @@ export default function ConnectionDebug() {
   // Game state info
   const currentPlayerId = gameState?.currentPlayerId;
   const gameId = gameState?.game?.id;
+  const gameCode = gameState?.game?.code;
   const onlinePlayers = gameState?.onlinePlayers || [];
   const players = gameState?.players || [];
   
@@ -30,7 +32,7 @@ export default function ConnectionDebug() {
         
         // Actually send the heartbeat
         socket.send(JSON.stringify({
-          type: 'heartbeat',
+          type: GameMessageType.HEARTBEAT,
           payload: {
             playerId: currentPlayerId,
             gameId,
@@ -42,13 +44,10 @@ export default function ConnectionDebug() {
       }
     };
     
-    // Send a debug heartbeat immediately
-    sendDebugHeartbeat();
+    // Don't automatically send debug heartbeats, as the main app already does this
+    // We'll just allow manual sending
     
-    // Set up interval for regular debug heartbeats (every 5 seconds)
-    const interval = setInterval(sendDebugHeartbeat, 5000);
-    
-    return () => clearInterval(interval);
+    return () => {};
   }, [socket, isConnected, currentPlayerId, gameId]);
   
   if (!showDebug) {
@@ -63,7 +62,7 @@ export default function ConnectionDebug() {
   }
   
   return (
-    <div className="fixed bottom-4 right-4 bg-gray-800 text-white p-4 rounded-md text-xs w-96 max-h-96 overflow-y-auto">
+    <div className="fixed bottom-4 right-4 bg-gray-800 text-white p-4 rounded-md text-xs w-96 max-h-96 overflow-y-auto z-50">
       <div className="flex justify-between items-center mb-2">
         <h3 className="font-bold">Connection Debug</h3>
         <button 
@@ -79,29 +78,55 @@ export default function ConnectionDebug() {
           <p><span className="font-bold">Connection:</span> {isConnected ? '🟢 Connected' : '🔴 Disconnected'}</p>
           <p><span className="font-bold">Player ID:</span> {currentPlayerId || 'Unknown'}</p>
           <p><span className="font-bold">Game ID:</span> {gameId || 'Unknown'}</p>
+          <p><span className="font-bold">Game Code:</span> {gameCode || 'Unknown'}</p>
         </div>
         <div>
           <p className="font-bold">Online Players:</p>
-          <ul>
-            {onlinePlayers.map(playerId => (
-              <li key={playerId}>
-                {playerId} - {players.find(p => p.id === playerId)?.username || 'Unknown'}
-              </li>
-            ))}
+          <ul className="border border-gray-700 p-2 rounded max-h-24 overflow-y-auto">
+            {onlinePlayers && onlinePlayers.length > 0 ? (
+              onlinePlayers.map(playerId => (
+                <li key={playerId} className="flex justify-between">
+                  <span>{playerId === currentPlayerId ? '➡️' : ''} {players.find(p => p.id === playerId)?.username || 'Unknown'}</span>
+                  <span className="text-green-400">{playerId}</span>
+                </li>
+              ))
+            ) : (
+              <li className="text-gray-500">No online players</li>
+            )}
+          </ul>
+          
+          <p className="font-bold mt-2">All Players:</p>
+          <ul className="border border-gray-700 p-2 rounded max-h-24 overflow-y-auto">
+            {players && players.length > 0 ? (
+              players.map(player => (
+                <li key={player.id} className="flex justify-between">
+                  <span>{player.id === currentPlayerId ? '➡️' : ''} {player.username}</span>
+                  <span className={onlinePlayers.includes(player.id) ? "text-green-400" : "text-red-400"}>
+                    {player.id} {onlinePlayers.includes(player.id) ? '🟢' : '🔴'}
+                  </span>
+                </li>
+              ))
+            ) : (
+              <li className="text-gray-500">No players</li>
+            )}
           </ul>
         </div>
       </div>
       
       <div>
         <p className="font-bold">Heartbeat Logs:</p>
-        <ul className="border border-gray-700 p-2 rounded">
-          {heartbeatLogs.map((log, i) => (
-            <li key={i} className="text-gray-400 mb-1">{log}</li>
-          ))}
+        <ul className="border border-gray-700 p-2 rounded max-h-24 overflow-y-auto">
+          {heartbeatLogs.length > 0 ? (
+            heartbeatLogs.map((log, i) => (
+              <li key={i} className="text-gray-400 mb-1">{log}</li>
+            ))
+          ) : (
+            <li className="text-gray-500">No heartbeat logs</li>
+          )}
         </ul>
       </div>
       
-      <div className="mt-4">
+      <div className="mt-4 flex space-x-2">
         <button 
           onClick={() => {
             if (!socket || !isConnected || !currentPlayerId || !gameId) return;
@@ -109,7 +134,7 @@ export default function ConnectionDebug() {
             // Force send a heartbeat
             const timestamp = Date.now();
             socket.send(JSON.stringify({
-              type: 'heartbeat',
+              type: GameMessageType.HEARTBEAT,
               payload: {
                 playerId: currentPlayerId,
                 gameId,
@@ -124,8 +149,34 @@ export default function ConnectionDebug() {
             });
           }}
           className="bg-primary text-white px-3 py-1 rounded text-xs"
+          disabled={!isConnected || !currentPlayerId || !gameId}
         >
           Force Heartbeat
+        </button>
+        
+        <button 
+          onClick={() => {
+            if (!socket || !isConnected || !gameCode) return;
+            
+            // Force reconnection request
+            socket.send(JSON.stringify({
+              type: GameMessageType.RECONNECT_REQUEST,
+              payload: { 
+                playerId: currentPlayerId,
+                gameCode
+              }
+            }));
+            
+            // Log it
+            setHeartbeatLogs(prev => {
+              const newLogs = [`MANUAL reconnect request: playerId=${currentPlayerId}, gameCode=${gameCode}`, ...prev];
+              return newLogs.slice(0, 5);
+            });
+          }}
+          className="bg-blue-500 text-white px-3 py-1 rounded text-xs"
+          disabled={!isConnected || !gameCode}
+        >
+          Force Reconnect
         </button>
       </div>
     </div>

@@ -38,6 +38,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ status: "ok" });
   });
   
+  // Test route to create a game with predictable code
+  app.get("/api/test/create-game", async (req, res) => {
+    try {
+      const gameCode = "TESTGAME"; // Fixed game code for testing
+      const username = req.query.username?.toString() || "TestUser";
+      const timerSeconds = parseInt(req.query.timer?.toString() || "60");
+      const totalRounds = parseInt(req.query.rounds?.toString() || "5");
+      
+      // Check if a game with this code already exists
+      let game = await storage.getGameByCode(gameCode);
+      
+      if (!game) {
+        // Create a new user or get existing one
+        let user = await storage.getUserByUsername(username);
+        if (!user) {
+          user = await storage.createUser({ username, password: "placeholder" });
+        }
+        
+        // Create the game
+        game = await storage.createGame({
+          code: gameCode,
+          hostId: user.id,
+          status: "lobby",
+          currentRound: 1,
+          totalRounds,
+          timerSeconds,
+        });
+        
+        // Create player (the host)
+        await storage.createPlayer({
+          gameId: game.id,
+          userId: user.id,
+          username: user.username,
+          score: 0,
+          isHost: true,
+          isActive: true
+        });
+        
+        console.log(`Test game created with code: ${gameCode} by ${username}`);
+      } else {
+        console.log(`Test game with code ${gameCode} already exists`);
+      }
+      
+      return res.json({ 
+        success: true, 
+        message: `Game with code ${gameCode} is ready to join`, 
+        gameCode 
+      });
+    } catch (error) {
+      console.error("Error creating test game:", error);
+      return res.status(500).json({ success: false, message: "Failed to create test game" });
+    }
+  });
+  
   // Generate image API endpoint
   app.post("/api/generate-image", async (req, res) => {
     try {
@@ -133,6 +187,123 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching game state:", error);
       res.status(500).json({ message: "Failed to fetch game state" });
     }
+  });
+
+  // Simple landing page with game joining instructions
+  app.get("/test-game", (req, res) => {
+    res.send(`
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>AI Image Guessing Game - Test</title>
+        <style>
+          body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+          }
+          .container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+          }
+          .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+          }
+          input, button {
+            padding: 10px;
+            font-size: 16px;
+          }
+          button {
+            cursor: pointer;
+            background: #5D3FD3;
+            color: white;
+            border: none;
+            border-radius: 4px;
+          }
+          .result {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f0f0f0;
+            border-radius: 4px;
+          }
+          .game-code {
+            font-size: 24px;
+            font-weight: bold;
+            background: #333;
+            color: white;
+            padding: 10px;
+            border-radius: 4px;
+            text-align: center;
+            margin: 10px 0;
+          }
+          .hidden {
+            display: none;
+          }
+        </style>
+      </head>
+      <body>
+        <h1>AI Image Guessing Game - Test Environment</h1>
+        <p>Use this page to create a test game with a fixed game code that's easy to join from other devices.</p>
+        
+        <div class="container">
+          <div class="form-group">
+            <label for="username">Your Username:</label>
+            <input type="text" id="username" placeholder="Enter your username" value="TestUser">
+          </div>
+          
+          <button id="create-game">Create Test Game</button>
+          <button id="join-game">Join Test Game</button>
+          
+          <div id="result" class="result hidden">
+            <h2>Game Created!</h2>
+            <p>You can now join this game using the code:</p>
+            <div class="game-code">TESTGAME</div>
+            <p>Share this code with other players to join the game.</p>
+            <button id="go-to-game">Go to Game</button>
+          </div>
+        </div>
+        
+        <script>
+          document.getElementById('create-game').addEventListener('click', async () => {
+            const username = document.getElementById('username').value;
+            
+            if (!username) {
+              alert('Please enter a username');
+              return;
+            }
+            
+            try {
+              const response = await fetch(\`/api/test/create-game?username=\${encodeURIComponent(username)}\`);
+              const data = await response.json();
+              
+              if (data.success) {
+                document.getElementById('result').classList.remove('hidden');
+              } else {
+                alert(\`Error: \${data.message}\`);
+              }
+            } catch (error) {
+              alert(\`Failed to create game: \${error.message}\`);
+            }
+          });
+          
+          document.getElementById('join-game').addEventListener('click', () => {
+            window.location.href = '/#/join/TESTGAME';
+          });
+          
+          document.getElementById('go-to-game').addEventListener('click', () => {
+            window.location.href = '/#/host/TESTGAME';
+          });
+        </script>
+      </body>
+      </html>
+    `);
   });
 
   // Test page for Gemini image generation

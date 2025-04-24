@@ -260,7 +260,18 @@ export class MemStorage implements IStorage {
   async createGame(game: InsertGame): Promise<Game> {
     const id = this.gameIdCounter++;
     const createdAt = new Date();
-    const newGame: Game = { ...game, id, createdAt };
+    
+    // Ensure all required fields are present with defaults to satisfy TypeScript
+    const newGame: Game = { 
+      ...game, 
+      id, 
+      createdAt,
+      status: game.status || "lobby",
+      currentRound: game.currentRound || 1,
+      totalRounds: game.totalRounds || 5,
+      timerSeconds: game.timerSeconds || 60
+    };
+    
     this.games.set(id, newGame);
     return newGame;
   }
@@ -302,7 +313,15 @@ export class MemStorage implements IStorage {
   // Round methods
   async createRound(round: InsertRound): Promise<Round> {
     const id = this.roundIdCounter++;
-    const newRound: Round = { ...round, id, startTime: null, endTime: null };
+    // Ensure all required fields have values
+    const newRound: Round = { 
+      ...round, 
+      id, 
+      startTime: null, 
+      endTime: null,
+      status: round.status || "waiting",
+      imageUrl: round.imageUrl || null
+    };
     this.rounds.set(id, newRound);
     return newRound;
   }
@@ -341,7 +360,15 @@ export class MemStorage implements IStorage {
   async createPlayer(player: InsertPlayer): Promise<Player> {
     const id = this.playerIdCounter++;
     const joinedAt = new Date();
-    const newPlayer: Player = { ...player, id, joinedAt };
+    // Ensure all required fields have values
+    const newPlayer: Player = { 
+      ...player, 
+      id, 
+      joinedAt,
+      score: player.score ?? 0,
+      isHost: player.isHost ?? false,
+      isActive: player.isActive ?? true
+    };
     this.players.set(id, newPlayer);
     return newPlayer;
   }
@@ -377,7 +404,14 @@ export class MemStorage implements IStorage {
   async createGuess(guess: InsertGuess): Promise<Guess> {
     const id = this.guessIdCounter++;
     const submittedAt = new Date();
-    const newGuess: Guess = { ...guess, id, submittedAt };
+    // Ensure all required fields have values
+    const newGuess: Guess = { 
+      ...guess, 
+      id, 
+      submittedAt,
+      matchedWords: guess.matchedWords ?? [],
+      matchCount: guess.matchCount ?? 0
+    };
     this.guesses.set(id, newGuess);
     return newGuess;
   }
@@ -404,7 +438,15 @@ export class MemStorage implements IStorage {
   async createRoundResult(result: InsertRoundResult): Promise<RoundResult> {
     const id = this.resultIdCounter++;
     const completedAt = new Date();
-    const newResult: RoundResult = { ...result, id, completedAt };
+    // Ensure all required fields have values
+    const newResult: RoundResult = { 
+      ...result, 
+      id, 
+      completedAt,
+      firstPlaceId: result.firstPlaceId ?? null,
+      secondPlaceId: result.secondPlaceId ?? null,
+      thirdPlaceId: result.thirdPlaceId ?? null
+    };
     this.roundResults.set(id, newResult);
     return newResult;
   }

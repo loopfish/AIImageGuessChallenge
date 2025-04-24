@@ -17,6 +17,7 @@ export default function GamePlay() {
   const { toast } = useToast();
   const [guess, setGuess] = useState("");
   const [matchedWords, setMatchedWords] = useState<string[]>([]);
+  const [hasSubmitted, setHasSubmitted] = useState(false);
   
   const currentRound = gameState?.currentRound;
   const currentPlayer = gameState?.players?.find(p => p.id === gameState.currentPlayerId);
@@ -96,6 +97,9 @@ export default function GamePlay() {
       description: "Your guess has been submitted successfully",
       variant: "default",
     });
+    
+    // Mark that the player has submitted a guess for this round
+    setHasSubmitted(true);
   };
   
   return (
@@ -171,19 +175,19 @@ export default function GamePlay() {
                   <Textarea
                     name="guess"
                     id="guess"
-                    placeholder="Enter your guess..."
+                    placeholder={hasSubmitted ? "You've already submitted a guess for this round" : "Enter your guess..."}
                     value={guess}
                     onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setGuess(e.target.value)}
                     className="min-h-[80px] resize-y"
-                    disabled={!canSubmitGuess}
+                    disabled={!canSubmitGuess || hasSubmitted}
                   />
                   <div className="flex justify-end">
                     <Button 
                       type="submit"
                       className="px-6"
-                      disabled={!canSubmitGuess}
+                      disabled={!canSubmitGuess || hasSubmitted}
                     >
-                      Submit Guess
+                      {hasSubmitted ? "Guess Submitted" : "Submit Guess"}
                     </Button>
                   </div>
                 </form>

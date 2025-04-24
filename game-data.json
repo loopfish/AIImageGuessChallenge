@@ -1,15 +1,73 @@
 {
-  "users": [],
-  "games": [],
+  "users": [
+    [
+      1,
+      {
+        "username": "TestUser",
+        "password": "placeholder",
+        "id": 1
+      }
+    ],
+    [
+      2,
+      {
+        "username": "Jen",
+        "password": "placeholder",
+        "id": 2
+      }
+    ]
+  ],
+  "games": [
+    [
+      1,
+      {
+        "code": "TESTGAME",
+        "hostId": 1,
+        "status": "lobby",
+        "currentRound": 1,
+        "totalRounds": 5,
+        "timerSeconds": 60,
+        "id": 1,
+        "createdAt": "2025-04-24T07:53:33.160Z"
+      }
+    ]
+  ],
   "rounds": [],
-  "players": [],
+  "players": [
+    [
+      1,
+      {
+        "gameId": 1,
+        "userId": 1,
+        "username": "TestUser",
+        "score": 0,
+        "isHost": true,
+        "isActive": false,
+        "id": 1,
+        "joinedAt": "2025-04-24T07:53:33.160Z"
+      }
+    ],
+    [
+      2,
+      {
+        "gameId": 1,
+        "userId": 2,
+        "username": "Jen",
+        "score": 0,
+        "isHost": false,
+        "isActive": true,
+        "id": 2,
+        "joinedAt": "2025-04-24T07:54:02.796Z"
+      }
+    ]
+  ],
   "guesses": [],
   "roundResults": [],
   "counters": {
-    "user": 1,
-    "game": 1,
+    "user": 3,
+    "game": 2,
     "round": 1,
-    "player": 1,
+    "player": 3,
     "guess": 1,
     "result": 1
   }

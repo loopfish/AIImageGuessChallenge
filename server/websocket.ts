@@ -311,14 +311,7 @@ async function handleJoinGame(
     }
     gameSet.add(clientId);
     
-    // Send updated player list to all clients in the game
-    const players = await storage.getPlayersByGameId(game.id);
-    sendToGame(game.id, {
-      type: GameMessageType.PLAYER_UPDATE,
-      payload: { players }
-    });
-    
-    // Send a specific player joined confirmation message first
+    // Important: Send player joined confirmation message first to set current player ID
     const joiningClient = clients.get(clientId);
     if (joiningClient && joiningClient.socket.readyState === WebSocket.OPEN) {
       joiningClient.socket.send(JSON.stringify({
@@ -332,11 +325,26 @@ async function handleJoinGame(
       }));
     }
     
-    // Broadcast the online players status
-    updateOnlinePlayersStatus(game.id);
-    
-    // Send complete game state to the new client
-    sendGameStateToClient(clientId, game.id, storage);
+    // Wait a short time to ensure client processes the player_joined message
+    // before updating player list to avoid race conditions
+    setTimeout(async () => {
+      try {
+        // Send updated player list to all clients in the game
+        const updatedPlayers = await storage.getPlayersByGameId(game.id);
+        sendToGame(game.id, {
+          type: GameMessageType.PLAYER_UPDATE,
+          payload: { players: updatedPlayers }
+        });
+        
+        // Broadcast online players status
+        updateOnlinePlayersStatus(game.id);
+        
+        // Send complete game state to all clients to ensure consistency
+        sendGameState(game.id, storage);
+      } catch (error) {
+        console.error("Error sending delayed player updates:", error);
+      }
+    }, 300); // Short delay to ensure client has time to set current player ID
     
     console.log(`Player ${username} joined game ${gameCode}`);
   } catch (error) {

@@ -107,6 +107,7 @@ export enum GameMessageType {
   GAME_ERROR = "game_error",
   PLAYER_GUESS = "player_guess",
   TIMER_UPDATE = "timer_update",
+  GAME_RESET = "game_reset",
   
   // Reconnection message types
   RECONNECT_REQUEST = "reconnect_request",
@@ -289,6 +290,13 @@ export interface PlayersOnlineUpdateMessage extends WebSocketMessage {
 
 export interface WelcomeMessage extends WebSocketMessage {
   type: GameMessageType.WELCOME;
+  payload: {
+    message: string;
+  };
+}
+
+export interface GameResetMessage extends WebSocketMessage {
+  type: GameMessageType.GAME_RESET;
   payload: {
     message: string;
   };

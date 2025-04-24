@@ -9,6 +9,7 @@ import { GameMessageType } from "@shared/schema";
 import WordMatch from "./WordMatch";
 import { useToast } from "@/hooks/use-toast";
 import { format, differenceInSeconds } from "date-fns";
+import avatarImage from "../../assets/avatar.webp";
 
 interface PlayerWithMatchedWords {
   id: number;
@@ -244,9 +245,26 @@ export default function ResultsScreen() {
           <p className="text-xl mt-2 font-medium">"{currentRound.prompt}"</p>
         </div>
         
-        <div className="p-6">
+        <div className="p-6 pl-36">
           {/* Winners Podium */}
-          <div className="flex justify-center items-end space-x-4 my-8">
+          <div className="relative flex justify-center items-end space-x-4 my-8">
+            {/* Avatar image to the left of podium */}
+            <div className="absolute left-0 bottom-0 transform -translate-x-24">
+              <div className="relative">
+                <img 
+                  src={avatarImage} 
+                  alt="Presenter avatar" 
+                  className="w-28 h-28 object-cover rounded-full border-2 border-gray-200 shadow-lg"
+                />
+                {/* Speech bubble pointing to podium */}
+                <div className="absolute -right-2 top-1/2 transform -translate-y-1/2 translate-x-full">
+                  <div className="relative bg-white p-2 rounded-lg shadow-md">
+                    <div className="absolute left-0 top-1/2 transform -translate-x-2 -translate-y-1/2 rotate-45 w-4 h-4 bg-white"></div>
+                    <p className="text-xs font-medium relative z-10 px-1">Congratulations!</p>
+                  </div>
+                </div>
+              </div>
+            </div>
             {/* 2nd Place */}
             {secondPlace && (
               <div className="text-center">

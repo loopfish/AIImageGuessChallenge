@@ -155,6 +155,7 @@ export interface GameState {
   timeRemaining?: number;
   currentPlayerId?: number; // ID of the current player
   onlinePlayers?: number[];  // Array of player IDs that are currently online
+  isConnecting?: boolean;   // Flag to indicate a connecting state
 }
 
 // WebSocket message types

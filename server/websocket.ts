@@ -71,11 +71,12 @@ export function setupWebsocketHandlers(wss: WebSocketServer, storage: IStorage) 
     console.log(`Total connected clients: ${clients.size}`);
     console.log(`Game rooms: ${gameClients.size}`);
     
-    // Send a welcome message to confirm connection is working
+    // Send a simple welcome message to confirm connection is working
+    // But don't send game state type to avoid confusion
     try {
       const welcomeMessage = JSON.stringify({
-        type: GameMessageType.GAME_STATE,
-        payload: { message: "Welcome to the game server!" }
+        type: "welcome",
+        payload: { message: "Connected to game server" }
       });
       socket.send(welcomeMessage);
       console.log(`Sent welcome message to client ${clientId}`);

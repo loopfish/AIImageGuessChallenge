@@ -79,7 +79,14 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
         console.log("Full game state message:", message.payload);
       }
       
+      // Handle different message types
       switch (message.type) {
+        // Handle welcome message from server
+        case "welcome":
+          console.log("Connected to server:", message.payload.message);
+          // No state changes needed for the welcome message
+          break;
+          
         case GameMessageType.GAME_STATE:
           const gameData = message.payload as GameState;
           

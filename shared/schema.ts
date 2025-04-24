@@ -116,7 +116,10 @@ export enum GameMessageType {
   // Connection status messages
   HEARTBEAT = "heartbeat",
   HEARTBEAT_RESPONSE = "heartbeat_response",
-  PLAYERS_ONLINE_UPDATE = "players_online_update"
+  PLAYERS_ONLINE_UPDATE = "players_online_update",
+  
+  // Server connection notification
+  WELCOME = "welcome"
 }
 
 // Types

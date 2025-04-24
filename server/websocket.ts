@@ -1034,6 +1034,16 @@ async function handlePlayerReconnect(clientId: string, payload: any, storage: IS
     if (client) {
       client.gameId = gameId;
       client.playerId = playerId;
+      client.connectionTime = Date.now();
+      client.lastActive = Date.now();
+      
+      // Add player to online players set for this game
+      let onlinePlayersForGame = onlinePlayers.get(gameId);
+      if (!onlinePlayersForGame) {
+        onlinePlayersForGame = new Set<number>();
+        onlinePlayers.set(gameId, onlinePlayersForGame);
+      }
+      onlinePlayersForGame.add(playerId);
     }
     
     // Add client to game clients map
@@ -1064,6 +1074,17 @@ async function handlePlayerReconnect(clientId: string, payload: any, storage: IS
       type: GameMessageType.PLAYER_UPDATE,
       payload: { players }
     });
+    
+    // Update online players status
+    const onlinePlayersForGame = onlinePlayers.get(gameId);
+    console.log(`DEBUG - Online players for game ${gameId} before update:`, 
+                onlinePlayersForGame ? Array.from(onlinePlayersForGame) : []);
+                
+    updateOnlinePlayersStatus(gameId);
+    
+    // Log online players again after update
+    console.log(`DEBUG - Online players for game ${gameId} after update:`, 
+                onlinePlayersForGame ? Array.from(onlinePlayersForGame) : []);
     
     // Send complete game state to the reconnected client
     sendGameStateToClient(clientId, gameId, storage);

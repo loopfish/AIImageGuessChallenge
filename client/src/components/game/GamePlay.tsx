@@ -55,6 +55,20 @@ export default function GamePlay() {
       return;
     }
     
+    // Check if player has already submitted a guess for this round
+    const existingGuesses = gameState.playerGuesses?.filter(
+      g => g.playerId === currentPlayer.id && g.roundId === currentRound.id
+    ) || [];
+    
+    if (existingGuesses.length > 0) {
+      toast({
+        title: "One Guess Per Round",
+        description: "You've already submitted a guess for this round",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     console.log(`Submitting guess as ${currentPlayer.username} (ID: ${currentPlayer.id}, Client ID: ${clientId})`);
     
     // Send the guess to the server with explicit player identification information
@@ -75,6 +89,13 @@ export default function GamePlay() {
     
     // Clear the input
     setGuess("");
+    
+    // Show toast notification
+    toast({
+      title: "Guess Submitted",
+      description: "Your guess has been submitted successfully",
+      variant: "default",
+    });
   };
   
   return (

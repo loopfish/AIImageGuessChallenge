@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode, useMemo, useRef } from "react";
 import { GameState, WebSocketMessage, GameMessageType } from "@shared/schema";
 import { useLocation } from "wouter";
+import { useToast } from "@/hooks/use-toast";
 
 interface GameContextType {
   gameState: GameState | null;
@@ -26,6 +27,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
   const [isConnected, setIsConnected] = useState(false);
   const [clientId, setClientId] = useState<string | null>(null);
   const [location] = useLocation();
+  const { toast } = useToast();
   
   // Store/track WebSocket instance using a ref to avoid re-renders
   const socketRef = useRef<WebSocket | null>(null);
@@ -234,7 +236,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     } catch (error) {
       console.error("Error handling message:", error);
     }
-  }, [getCurrentPlayerFromStorage, saveCurrentPlayerToStorage]);
+  }, [getCurrentPlayerFromStorage, saveCurrentPlayerToStorage, toast]);
   
   // Attempt reconnection with exponential backoff
   // Enhanced reconnection logic 

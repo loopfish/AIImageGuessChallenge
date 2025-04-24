@@ -169,56 +169,46 @@ export function PlayerConnectionInfo({ compact = false }: PlayerConnectionInfoPr
     <Card className="overflow-hidden bg-white/80 backdrop-blur-sm border-green-200 shadow-md">
       <CardHeader className="p-3 bg-gradient-to-r from-green-50 to-green-100">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-sm font-medium text-green-800 flex items-center">
-            <WifiIcon className="h-4 w-4 mr-1 text-green-600" />
-            Connected
-          </CardTitle>
-          <Badge variant="outline" className="bg-green-100 text-green-800 hover:bg-green-200">
-            {gameState?.game?.code || ""}
-          </Badge>
+          <div className="flex items-center gap-2">
+            <CardTitle className="text-sm font-medium text-green-800 flex items-center">
+              <WifiIcon className="h-4 w-4 mr-1 text-green-600" />
+              Game Lobby
+            </CardTitle>
+            <Badge variant="outline" className="bg-green-100 text-green-800 hover:bg-green-200">
+              {gameState?.game?.code || ""}
+            </Badge>
+          </div>
+          <CardDescription className="text-xs text-green-700 m-0">
+            {isConnected ? 
+              `${onlinePlayers.length} player${onlinePlayers.length !== 1 ? 's' : ''} online` : 
+              "Connecting..."}
+          </CardDescription>
         </div>
-        <CardDescription className="text-xs text-green-700">
-          {isConnected ? 
-            `Active connection (${onlinePlayers.length} player${onlinePlayers.length !== 1 ? 's' : ''} online)` : 
-            "Connecting..."}
-        </CardDescription>
       </CardHeader>
-      <CardContent className="p-3 text-xs">
-        <div className="flex flex-col space-y-1">
-          {/* Current player info */}
-          <div className="flex justify-between items-center">
-            <span className="font-semibold text-gray-600 flex items-center">
+      <CardContent className="p-3">
+        <div className="flex justify-between items-center">
+          <div className="flex items-center gap-2">
+            <div className="flex items-center">
               {currentPlayer?.isHost ? (
-                <CrownIcon className="h-3 w-3 mr-1 text-amber-500" />
+                <div className="flex items-center bg-amber-50 border border-amber-200 rounded-full px-2 py-1">
+                  <CrownIcon className="h-4 w-4 text-amber-500 mr-1" />
+                  <span className="text-sm font-medium text-amber-700">Host: {currentPlayer.username}</span>
+                </div>
               ) : (
-                <UserIcon className="h-3 w-3 mr-1" />
-              )}
-              {currentPlayer?.isHost ? "Host:" : "Player:"}
-            </span>
-            <div className="flex items-center gap-1">
-              <span className="text-gray-900">{currentPlayer.username}</span>
-              {currentPlayer?.isHost && (
-                <Badge className="text-[0.6rem] px-1 py-0 h-4 bg-amber-100 text-amber-800 hover:bg-amber-200">
-                  HOST
-                </Badge>
+                <div className="flex items-center bg-blue-50 border border-blue-200 rounded-full px-2 py-1">
+                  <UserIcon className="h-4 w-4 text-blue-500 mr-1" />
+                  <span className="text-sm font-medium text-blue-700">Player: {currentPlayer.username}</span>
+                </div>
               )}
             </div>
           </div>
           
-          {/* Player ID only (removed Client ID as requested) */}
-          <div className="flex justify-between items-center">
-            <span className="font-semibold text-gray-600">Player ID:</span>
-            <code className="bg-gray-100 px-1 py-0.5 rounded text-gray-800 text-[0.65rem]">
-              {currentPlayer.id}
-            </code>
-          </div>
-          
           {/* Online players status */}
-          {gameState?.players && gameState.players.length > 1 && (
-            <div className="mt-2 pt-2 border-t border-gray-100">
-              <div className="font-semibold text-gray-600 mb-1">Players Online:</div>
-              <div className="flex flex-wrap gap-1">
-                {gameState.players.map(player => {
+          {gameState?.players && gameState?.players.length > 0 && (
+            <div className="flex items-center">
+              <div className="font-medium text-sm text-gray-600 mr-2">Players:</div>
+              <div className="flex gap-1">
+                {gameState?.players?.map(player => {
                   const isOnline = onlinePlayers.includes(player.id);
                   return (
                     <Badge 
@@ -232,6 +222,7 @@ export function PlayerConnectionInfo({ compact = false }: PlayerConnectionInfoPr
                         isOnline ? 'text-green-500' : 'text-gray-300'
                       }`} />
                       {player.username}
+                      {player.isHost && <CrownIcon className="h-3 w-3 ml-1 text-amber-500" />}
                     </Badge>
                   );
                 })}

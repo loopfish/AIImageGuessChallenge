@@ -230,13 +230,10 @@ export default function HostLobby() {
                 <img 
                   className={`object-contain w-full h-full ${generating ? 'hidden' : 'block'}`} 
                   src={previewImageUrl || gameState?.currentRound?.imageUrl || "https://placehold.co/800x600/5D3FD3/FFFFFF"} 
-                  alt="Generated stock image for guessing game" 
+                  alt="AI-generated image for guessing game" 
                 />
               </div>
-              <p className="text-sm text-gray-500 mt-2">
-                Note: The game uses consistent stock images based on keywords from your prompt. 
-                While not directly generated from your prompt, the same prompt will always give the same image.
-              </p>
+              {/* Image generation notice removed as requested */}
             </div>
           </div>
           

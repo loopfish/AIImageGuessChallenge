@@ -2,41 +2,33 @@ import React, { useState, useEffect } from 'react';
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useGameContext } from "@/hooks/use-game";
-import { UserIcon, WifiIcon, CrownIcon, CircleIcon } from "lucide-react";
+import { UserIcon, WifiIcon, CrownIcon, CircleIcon, UsersIcon } from "lucide-react";
+
+interface PlayerConnectionInfoProps {
+  compact?: boolean;
+}
 
 /**
  * Component that displays the current player's connection information
  * and shows which players are currently online
+ * Now supports a compact mode for smaller display in top-right corner
  */
-export function PlayerConnectionInfo() {
-  const { gameState, isConnected, clientId: actualClientId } = useGameContext();
-  const [displayClientId, setDisplayClientId] = useState<string>("");
+export function PlayerConnectionInfo({ compact = false }: PlayerConnectionInfoProps) {
+  const { gameState, isConnected } = useGameContext();
   
   // Find the current player from game state
   const currentPlayer = gameState?.players?.find(p => p.id === gameState.currentPlayerId);
   
   // Get online players
   const onlinePlayers = gameState?.onlinePlayers || [];
-  
-  // Generate a shorter clientId for display
-  useEffect(() => {
-    if (actualClientId) {
-      // Use the actual clientId but truncate it for display
-      const shortened = actualClientId.substring(0, 8) + "...";
-      setDisplayClientId(shortened);
-    } else {
-      // Fallback to random ID for display purposes
-      const random = Math.random().toString(36).substring(2, 8);
-      setDisplayClientId(random);
-    }
-  }, [actualClientId]);
 
   // Log component rendering for debugging
   console.log("PlayerConnectionInfo component rendering:", {
     gameState,
     currentPlayer,
     isConnected,
-    onlinePlayers
+    onlinePlayers,
+    compact
   });
   
   // Check for the special isConnecting flag or if we don't have player data yet
@@ -45,26 +37,30 @@ export function PlayerConnectionInfo() {
   // If we're not connected at all, show a disconnected state
   if (!isConnected) {
     return (
-      <Card className="overflow-hidden bg-white/50 backdrop-blur-sm border-red-200">
-        <CardHeader className="p-3 bg-gradient-to-r from-red-50 to-red-100">
+      <Card className={`overflow-hidden bg-white/80 backdrop-blur-sm border-red-200 shadow-md ${compact ? 'shadow-lg' : ''}`}>
+        <CardHeader className={`${compact ? 'p-2' : 'p-3'} bg-gradient-to-r from-red-50 to-red-100`}>
           <div className="flex items-center justify-between">
             <CardTitle className="text-sm font-medium text-red-800 flex items-center">
               <WifiIcon className="h-4 w-4 mr-1 text-red-600" />
               Disconnected
             </CardTitle>
           </div>
-          <CardDescription className="text-xs text-red-700">
-            Not connected to game server
-          </CardDescription>
+          {!compact && (
+            <CardDescription className="text-xs text-red-700">
+              Not connected to game server
+            </CardDescription>
+          )}
         </CardHeader>
-        <CardContent className="p-3 text-xs">
-          <div className="flex flex-col space-y-1">
-            <div className="flex items-center text-red-600">
-              <CircleIcon className="h-2 w-2 mr-1" />
-              <span>Waiting for connection...</span>
+        {!compact && (
+          <CardContent className="p-3 text-xs">
+            <div className="flex flex-col space-y-1">
+              <div className="flex items-center text-red-600">
+                <CircleIcon className="h-2 w-2 mr-1" />
+                <span>Waiting for connection...</span>
+              </div>
             </div>
-          </div>
-        </CardContent>
+          </CardContent>
+        )}
       </Card>
     );
   }
@@ -72,8 +68,8 @@ export function PlayerConnectionInfo() {
   // If we're connecting or no currentPlayer is found but we're connected, show a connecting state
   if (isConnecting) {
     return (
-      <Card className="overflow-hidden bg-white/50 backdrop-blur-sm border-amber-200">
-        <CardHeader className="p-3 bg-gradient-to-r from-amber-50 to-amber-100">
+      <Card className={`overflow-hidden bg-white/80 backdrop-blur-sm border-amber-200 shadow-md ${compact ? 'shadow-lg' : ''}`}>
+        <CardHeader className={`${compact ? 'p-2' : 'p-3'} bg-gradient-to-r from-amber-50 to-amber-100`}>
           <div className="flex items-center justify-between">
             <CardTitle className="text-sm font-medium text-amber-800 flex items-center">
               <WifiIcon className="h-4 w-4 mr-1 text-amber-600" />
@@ -85,20 +81,24 @@ export function PlayerConnectionInfo() {
               </Badge>
             )}
           </div>
-          <CardDescription className="text-xs text-amber-700">
-            Joining game...
-          </CardDescription>
+          {!compact && (
+            <CardDescription className="text-xs text-amber-700">
+              Joining game...
+            </CardDescription>
+          )}
         </CardHeader>
-        <CardContent className="p-3 text-xs">
-          <div className="flex flex-col space-y-1">
-            <div className="animate-pulse flex space-x-4">
-              <div className="flex-1 space-y-2 py-1">
-                <div className="h-2 bg-amber-100 rounded"></div>
-                <div className="h-2 bg-amber-100 rounded"></div>
+        {!compact && (
+          <CardContent className="p-3 text-xs">
+            <div className="flex flex-col space-y-1">
+              <div className="animate-pulse flex space-x-4">
+                <div className="flex-1 space-y-2 py-1">
+                  <div className="h-2 bg-amber-100 rounded"></div>
+                  <div className="h-2 bg-amber-100 rounded"></div>
+                </div>
               </div>
             </div>
-          </div>
-        </CardContent>
+          </CardContent>
+        )}
       </Card>
     );
   }
@@ -107,8 +107,8 @@ export function PlayerConnectionInfo() {
   // but if not, show a fallback view
   if (!currentPlayer) {
     return (
-      <Card className="overflow-hidden bg-white/50 backdrop-blur-sm border-blue-200">
-        <CardHeader className="p-3 bg-gradient-to-r from-blue-50 to-blue-100">
+      <Card className={`overflow-hidden bg-white/80 backdrop-blur-sm border-blue-200 shadow-md ${compact ? 'shadow-lg' : ''}`}>
+        <CardHeader className={`${compact ? 'p-2' : 'p-3'} bg-gradient-to-r from-blue-50 to-blue-100`}>
           <div className="flex items-center justify-between">
             <CardTitle className="text-sm font-medium text-blue-800 flex items-center">
               <WifiIcon className="h-4 w-4 mr-1 text-blue-600" />
@@ -118,25 +118,55 @@ export function PlayerConnectionInfo() {
               {gameState?.game?.code || ""}
             </Badge>
           </div>
-          <CardDescription className="text-xs text-blue-700">
-            Connected to game server
-          </CardDescription>
+          {!compact && (
+            <CardDescription className="text-xs text-blue-700">
+              Connected to game server
+            </CardDescription>
+          )}
         </CardHeader>
-        <CardContent className="p-3 text-xs">
-          <div className="flex flex-col space-y-1">
-            <div className="flex items-center text-blue-600">
-              <CircleIcon className="h-2 w-2 mr-1" />
-              <span>Waiting for player data...</span>
+        {!compact && (
+          <CardContent className="p-3 text-xs">
+            <div className="flex flex-col space-y-1">
+              <div className="flex items-center text-blue-600">
+                <CircleIcon className="h-2 w-2 mr-1" />
+                <span>Waiting for player data...</span>
+              </div>
             </div>
-          </div>
-        </CardContent>
+          </CardContent>
+        )}
       </Card>
     );
   }
 
-  // Regular connected view with player info
+  // Compact mode - minimal info
+  if (compact) {
+    return (
+      <Card className="overflow-hidden bg-white/80 backdrop-blur-sm border-green-200 shadow-lg">
+        <CardHeader className="p-2 bg-gradient-to-r from-green-50 to-green-100">
+          <div className="flex items-center justify-between gap-2">
+            <CardTitle className="text-sm font-medium text-green-800 flex items-center">
+              <WifiIcon className="h-3 w-3 mr-1 text-green-600" />
+              <span className="truncate">
+                {currentPlayer.username}
+                {currentPlayer.isHost && <CrownIcon className="inline h-3 w-3 ml-1 text-amber-500" />}
+              </span>
+            </CardTitle>
+            <div className="flex items-center gap-1">
+              <UsersIcon className="h-3 w-3 text-gray-500" />
+              <span className="text-xs">{onlinePlayers.length}/{gameState.players.length}</span>
+              <Badge variant="outline" className="text-xs px-1.5 py-0 h-4 bg-green-100 text-green-800">
+                {gameState.game.code}
+              </Badge>
+            </div>
+          </div>
+        </CardHeader>
+      </Card>
+    );
+  }
+
+  // Regular connected view with player info (full mode)
   return (
-    <Card className="overflow-hidden bg-white/50 backdrop-blur-sm border-green-200">
+    <Card className="overflow-hidden bg-white/80 backdrop-blur-sm border-green-200 shadow-md">
       <CardHeader className="p-3 bg-gradient-to-r from-green-50 to-green-100">
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm font-medium text-green-800 flex items-center">
@@ -175,14 +205,7 @@ export function PlayerConnectionInfo() {
             </div>
           </div>
           
-          {/* Connection info */}
-          <div className="flex justify-between items-center">
-            <span className="font-semibold text-gray-600">Client ID:</span>
-            <code className="bg-gray-100 px-1 py-0.5 rounded text-gray-800 text-[0.65rem]">
-              {displayClientId}
-            </code>
-          </div>
-          
+          {/* Player ID only (removed Client ID as requested) */}
           <div className="flex justify-between items-center">
             <span className="font-semibold text-gray-600">Player ID:</span>
             <code className="bg-gray-100 px-1 py-0.5 rounded text-gray-800 text-[0.65rem]">

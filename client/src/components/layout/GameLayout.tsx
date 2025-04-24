@@ -9,8 +9,8 @@ interface GameLayoutProps {
 
 /**
  * Layout component for all game screens
- * Automatically includes the PlayerConnectionInfo on all screens
- * Always shows the connection panel with all possible fallbacks
+ * Automatically includes the PlayerConnectionInfo on all screens as a compact panel
+ * in the top right corner
  */
 export function GameLayout({ children, showConnectionInfo = true }: GameLayoutProps) {
   const { gameState, isConnected } = useGameContext();
@@ -23,25 +23,28 @@ export function GameLayout({ children, showConnectionInfo = true }: GameLayoutPr
   });
 
   return (
-    <div className="game-layout">
-      {/* Always display the connection panel with guaranteed visibility */}
+    <div className="game-layout relative">
+      {/* Connection panel in top right corner */}
       {showConnectionInfo && (
         <div 
-          className="mb-6" 
+          className="connection-panel-container"
           style={{
             display: 'block', 
             visibility: 'visible',
-            position: 'relative',
-            zIndex: 10
+            position: 'fixed',
+            top: '16px',
+            right: '16px',
+            maxWidth: '260px',
+            zIndex: 50
           }}
           data-force-display="true"
         >
-          <PlayerConnectionInfo />
+          <PlayerConnectionInfo compact={true} />
         </div>
       )}
       
       {/* Main content */}
-      <div className="game-layout-content">
+      <div className="game-layout-content pt-2">
         {children}
       </div>
     </div>

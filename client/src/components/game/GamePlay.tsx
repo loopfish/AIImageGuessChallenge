@@ -8,6 +8,7 @@ import Timer from "./Timer";
 import PlayerList from "./PlayerList";
 import WordMatch from "./WordMatch";
 import PlayerGuesses from "./PlayerGuesses";
+import { PlayerConnectionInfo } from "./PlayerConnectionInfo";
 import { GameMessageType } from "@shared/schema";
 
 export default function GamePlay() {

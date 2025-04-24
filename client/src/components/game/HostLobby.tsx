@@ -9,6 +9,7 @@ import { useGameContext } from "@/hooks/use-game";
 import { GameMessageType } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import LobbyCard from "./LobbyCard";
+import { PlayerConnectionInfo } from "./PlayerConnectionInfo";
 
 export default function HostLobby() {
   const { gameState, socket, isConnected } = useGameContext();
@@ -251,7 +252,11 @@ export default function HostLobby() {
         </div>
         
         {/* Right Column: Player Lobby */}
-        <div>
+        <div className="space-y-4">
+          {/* Player Connection Info */}
+          <PlayerConnectionInfo />
+          
+          {/* Player List */}
           <LobbyCard />
         </div>
       </div>

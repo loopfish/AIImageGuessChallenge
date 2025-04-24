@@ -7,6 +7,7 @@ import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/card"
 import { useToast } from "@/hooks/use-toast";
 import { useGameContext } from "@/hooks/use-game";
 import { GameMessageType } from "@shared/schema";
+import { PlayerConnectionInfo } from "./PlayerConnectionInfo";
 
 export default function JoinLobby() {
   const [, navigate] = useLocation();

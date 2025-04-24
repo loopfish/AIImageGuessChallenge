@@ -212,15 +212,14 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
         case GameMessageType.GAME_RESET:
           // Game has been reset, redirect all players to home page
           console.log("Game reset received:", message.payload.message);
-          toast({
-            title: "Game Reset",
-            description: message.payload.message,
-            variant: "default",
-          });
+          
           // Reset the game state
           setGameState(null);
-          // Navigate to home page
-          navigate("/");
+          
+          // Navigate to home page after a brief delay
+          setTimeout(() => {
+            window.location.href = "/";
+          }, 1000);
           break;
       }
     } catch (error) {

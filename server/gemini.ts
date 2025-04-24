@@ -21,8 +21,8 @@ export async function generateImage(prompt: string): Promise<string> {
       const genAI = new GoogleGenerativeAI(apiKey);
       console.log("DEBUG: Successfully initialized GoogleGenerativeAI client");
       
-      // Use the experimental image generation model (gemini-2.0-flash-experimental-vision)
-      const imageModel = genAI.getGenerativeModel({ model: "gemini-pro-vision" });
+      // Use the experimental Gemini 2.0 Flash model for image generation
+      const imageModel = genAI.getGenerativeModel({ model: "gemini-2.0-flash-experimental" });
       
       try {
         // Try to generate an image using the experimental API
@@ -34,8 +34,9 @@ export async function generateImage(prompt: string): Promise<string> {
             {
               role: "user",
               parts: [
-                { text: `Generate an image for the following prompt: ${prompt}. 
-                Create a visually striking and high-quality image that accurately represents the prompt.` }
+                { text: `I want an image of ${prompt}.
+                Take an image from the internet if you can.
+                If you can't, provide a detailed description of what that image would look like.` }
               ]
             }
           ],

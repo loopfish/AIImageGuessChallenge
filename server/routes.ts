@@ -202,9 +202,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           <div class="form-group">
             <label for="model">Gemini Model:</label>
             <select id="model">
+              <option value="gemini-2.0-flash-experimental">gemini-2.0-flash-experimental (for image generation)</option>
               <option value="gemini-1.5-flash">gemini-1.5-flash</option>
               <option value="gemini-1.5-pro">gemini-1.5-pro</option>
-              <option value="gemini-1.0-pro">gemini-1.0-pro</option>
             </select>
           </div>
           <div class="form-group">
@@ -331,10 +331,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             {
               role: "user",
               parts: [
-                { text: `Generate an image for: "${prompt}". 
-                Please provide a detailed visual representation of the prompt. 
-                If possible, include a URL to a similar image or describe how to create such an image 
-                in detail so I can visualize it.` }
+                { text: `I want an image of ${prompt}.
+                Take an image from the internet if you can.
+                If you can't, provide a detailed description of what that image would look like.` }
               ]
             }
           ],
@@ -366,11 +365,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           imageUrl: imageUrl
         });
         
-      } catch (modelError) {
-        console.error("Error using Gemini model:", modelError);
+      } catch (error: any) {
+        console.error("Error using Gemini model:", error);
         return res.status(500).json({ 
-          error: `Error using Gemini model: ${modelError.message}`,
-          details: modelError
+          error: `Error using Gemini model: ${error.message || 'Unknown error'}`,
+          details: error
         });
       }
     } catch (error) {

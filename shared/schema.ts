@@ -111,6 +111,11 @@ export enum GameMessageType {
   RECONNECT_REQUEST = "reconnect_request",
   RECONNECT_SUCCESS = "reconnect_success",
   RECONNECT_FAILURE = "reconnect_failure",
+  
+  // Connection status messages
+  HEARTBEAT = "heartbeat",
+  HEARTBEAT_RESPONSE = "heartbeat_response",
+  PLAYERS_ONLINE_UPDATE = "players_online_update"
 }
 
 // Types
@@ -141,6 +146,7 @@ export interface GameState {
   roundResults?: RoundResult;
   timeRemaining?: number;
   currentPlayerId?: number; // ID of the current player
+  onlinePlayers?: number[];  // Array of player IDs that are currently online
 }
 
 // WebSocket message types
@@ -244,5 +250,30 @@ export interface GameErrorMessage extends WebSocketMessage {
   type: GameMessageType.GAME_ERROR;
   payload: {
     message: string;
+  };
+}
+
+export interface HeartbeatMessage extends WebSocketMessage {
+  type: GameMessageType.HEARTBEAT;
+  payload: {
+    playerId: number;
+    gameId: number;
+    timestamp: number;
+  };
+}
+
+export interface HeartbeatResponseMessage extends WebSocketMessage {
+  type: GameMessageType.HEARTBEAT_RESPONSE;
+  payload: {
+    acknowledged: boolean;
+    timestamp: number;
+  };
+}
+
+export interface PlayersOnlineUpdateMessage extends WebSocketMessage {
+  type: GameMessageType.PLAYERS_ONLINE_UPDATE;
+  payload: {
+    gameId: number;
+    onlinePlayers: number[]; // Array of player IDs that are currently online
   };
 }

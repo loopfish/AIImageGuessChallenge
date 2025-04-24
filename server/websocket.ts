@@ -29,6 +29,8 @@ interface ConnectedClient {
   socket: WebSocket;
   playerId?: number;
   gameId?: number;
+  connectionTime?: number; // Timestamp of connection
+  lastActive?: number;     // Timestamp of last activity
 }
 
 // Map of clientId to ConnectedClient
@@ -39,6 +41,12 @@ const gameClients = new Map<number, Set<string>>();
 
 // Map of games with active timers
 const gameTimers = new Map<number, NodeJS.Timeout>();
+
+// Map of gameId to set of online playerIds
+const onlinePlayers = new Map<number, Set<number>>();
+
+// Heartbeat interval (in milliseconds)
+const HEARTBEAT_INTERVAL = 10000; // 10 seconds
 
 // Use the reconnection types from the shared schema
 
@@ -51,8 +59,12 @@ export function setupWebsocketHandlers(wss: WebSocketServer, storage: IStorage) 
     console.log(`Client connected: ${clientId}, URL: ${request.url}`);
     console.log(`WebSocket connection state: ${socket.readyState}`);
 
-    // Store the client connection
-    clients.set(clientId, { socket });
+    // Store the client connection with activity timestamps
+    clients.set(clientId, { 
+      socket,
+      connectionTime: Date.now(),
+      lastActive: Date.now()
+    });
     console.log(`Total connected clients: ${clients.size}`);
     console.log(`Game rooms: ${gameClients.size}`);
     
@@ -71,6 +83,12 @@ export function setupWebsocketHandlers(wss: WebSocketServer, storage: IStorage) 
     // Handle messages from clients
     socket.on("message", async (message: string) => {
       try {
+        // Update last active timestamp
+        const client = clients.get(clientId);
+        if (client) {
+          client.lastActive = Date.now();
+        }
+        
         const parsedMessage: WebSocketMessage = JSON.parse(message);
         console.log(`Received message type: ${parsedMessage.type}`);
         
@@ -107,6 +125,11 @@ export function setupWebsocketHandlers(wss: WebSocketServer, storage: IStorage) 
           // Handle player reconnection request
           case GameMessageType.RECONNECT_REQUEST:
             await handlePlayerReconnect(clientId, parsedMessage.payload, storage);
+            break;
+
+          // Handle heartbeat from client
+          case GameMessageType.HEARTBEAT:
+            handleHeartbeat(clientId, parsedMessage as HeartbeatMessage);
             break;
         }
       } catch (error) {

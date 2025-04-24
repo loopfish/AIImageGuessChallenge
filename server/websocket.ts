@@ -418,42 +418,48 @@ async function handleSubmitGuess(message: SubmitGuessMessage, storage: IStorage)
       throw new Error("Round not active");
     }
     
-    // Get the player
-    const player = await storage.getPlayer(playerId);
+    // Get all possible players for this game
+    const allPlayers = await storage.getPlayersByGameId(gameId);
+    if (!allPlayers || allPlayers.length === 0) {
+      throw new Error(`No players found for game ${gameId}`);
+    }
+    
+    // We want to make sure we're using the right player
+    // First, try to find the player directly
+    let player = allPlayers.find(p => p.id === playerId);
+    
+    // If player not found by ID, find the client who submitted this guess
+    // and use their player ID instead
     if (!player) {
-      console.error(`Player ${playerId} not found when submitting guess`);
+      console.log(`Player ${playerId} not found directly. Attempting to find correct player...`);
       
-      // Try to find the player using the client mapping
-      const clientEntries = Array.from(clients.entries());
-      const clientId = clientEntries.find(([id, client]) => 
-        client && client.gameId === gameId && client.socket.readyState === WebSocket.OPEN
-      )?.[0];
+      // Lookup all clients in this game
+      const gameClients = Array.from(clients.entries())
+        .filter(([_, client]) => client.gameId === gameId);
       
-      if (clientId) {
-        const client = clients.get(clientId);
-        if (client && client.playerId) {
-          const correctPlayer = await storage.getPlayer(client.playerId);
-          if (correctPlayer) {
-            console.log(`Found correct player ${correctPlayer.username} (${correctPlayer.id}) for guess submission`);
-            return handleSubmitGuess({
-              type: GameMessageType.SUBMIT_GUESS,
-              payload: {
-                gameId,
-                playerId: correctPlayer.id,
-                roundId,
-                guessText
-              }
-            }, storage);
+      // Debug info
+      console.log(`Found ${gameClients.length} clients connected to game ${gameId}`);
+      
+      for (const [clientId, client] of gameClients) {
+        if (client.playerId) {
+          console.log(`Client ${clientId} is mapped to player ${client.playerId} in game ${gameId}`);
+          const possiblePlayer = allPlayers.find(p => p.id === client.playerId);
+          if (possiblePlayer) {
+            player = possiblePlayer;
+            console.log(`Remapped guess to player ${player.username} (ID: ${player.id})`);
+            break;
           }
         }
       }
       
-      throw new Error("Player not found");
+      if (!player) {
+        throw new Error(`Could not find a valid player in game ${gameId} for this guess`);
+      }
     }
     
     // Verify this player is in the correct game
     if (player.gameId !== gameId) {
-      console.error(`Player ${playerId} (${player.username}) belongs to game ${player.gameId}, not ${gameId}`);
+      console.error(`Player ${player.id} (${player.username}) belongs to game ${player.gameId}, not ${gameId}`);
       throw new Error("Player not in this game");
     }
     
@@ -464,15 +470,16 @@ async function handleSubmitGuess(message: SubmitGuessMessage, storage: IStorage)
     // Find matched words
     const matchedWords = matchWords(prompt, guess);
     
-    // Create guess entry
+    // Create guess entry with the CORRECT player ID (not the one from the message)
     const guessData: InsertGuess = {
       roundId,
-      playerId,
+      playerId: player.id, // Use the corrected player ID
       guessText: guess,
       matchedWords,
       matchCount: matchedWords.length
     };
     
+    console.log(`Creating guess for player ${player.username} (ID: ${player.id}) in round ${roundId}`);
     const newGuess = await storage.createGuess(guessData);
     
     // Notify all clients about the new guess

@@ -1,6 +1,6 @@
-import { useState, FormEvent } from "react";
+import React, { useState, FormEvent } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { useGameContext } from "@/hooks/use-game";
@@ -115,22 +115,21 @@ export default function GamePlay() {
               <h3 className="text-xl font-heading font-medium text-neutral-dark mb-1">Guess the Prompt</h3>
               <p className="text-gray-600 text-sm">Try to match as many words from the original prompt as possible.</p>
               
-              <form onSubmit={handleSubmitGuess} className="mt-1 relative rounded-md shadow-sm">
-                <Input
-                  type="text"
+              <form onSubmit={handleSubmitGuess} className="mt-1 space-y-2">
+                <Textarea
                   name="guess"
                   id="guess"
-                  className="pr-16"
                   placeholder="Enter your guess..."
                   value={guess}
-                  onChange={(e) => setGuess(e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setGuess(e.target.value)}
+                  className="min-h-[80px] resize-y"
                 />
-                <div className="absolute inset-y-0 right-0 flex items-center">
+                <div className="flex justify-end">
                   <Button 
-                    type="submit" 
-                    className="rounded-l-none h-full"
+                    type="submit"
+                    className="px-6"
                   >
-                    Submit
+                    Submit Guess
                   </Button>
                 </div>
               </form>

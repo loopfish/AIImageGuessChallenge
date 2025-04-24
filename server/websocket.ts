@@ -301,6 +301,20 @@ async function handleJoinGame(
       payload: { players }
     });
     
+    // Send a specific player joined confirmation message first
+    const joiningClient = clients.get(clientId);
+    if (joiningClient && joiningClient.socket.readyState === WebSocket.OPEN) {
+      joiningClient.socket.send(JSON.stringify({
+        type: "player_joined",
+        payload: { 
+          success: true,
+          playerId: player.id,
+          gameId: game.id,
+          gameCode
+        }
+      }));
+    }
+    
     // Send complete game state to the new client
     sendGameStateToClient(clientId, game.id, storage);
     

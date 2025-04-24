@@ -98,6 +98,7 @@ export enum GameMessageType {
   START_GAME = "start_game",
   SUBMIT_GUESS = "submit_guess",
   NEXT_ROUND = "next_round",
+  PLAYER_JOINED = "player_joined",
   END_GAME = "end_game",
   PLAYER_UPDATE = "player_update",
   GAME_STATE = "game_state",

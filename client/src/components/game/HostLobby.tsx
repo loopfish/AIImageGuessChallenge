@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { PlayIcon, Loader2 } from "lucide-react";
@@ -145,26 +146,27 @@ export default function HostLobby() {
               <Label htmlFor="prompt" className="block text-sm font-medium text-gray-700">
                 Enter Image Prompt
               </Label>
-              <div className="mt-1 relative rounded-md shadow-sm">
-                <Input
-                  type="text"
+              <div className="mt-1 space-y-2">
+                <Textarea
                   id="prompt"
                   value={prompt}
                   onChange={(e) => setPrompt(e.target.value)}
-                  className="pr-16"
+                  className="min-h-[80px] resize-y"
                   placeholder="A cat wearing sunglasses on a beach"
                 />
-                <div className="absolute inset-y-0 right-0 flex items-center">
+                <div className="flex justify-end">
                   <Button
                     type="button"
                     onClick={handleGenerateImage}
                     disabled={generating || !prompt.trim()}
-                    className="rounded-l-none h-full"
                   >
                     {generating ? (
-                      <Loader2 className="animate-spin h-4 w-4 mr-2" />
+                      <>
+                        <Loader2 className="animate-spin h-4 w-4 mr-2" />
+                        Generating...
+                      </>
                     ) : (
-                      "Generate"
+                      "Generate Image"
                     )}
                   </Button>
                 </div>

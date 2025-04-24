@@ -8,6 +8,7 @@ interface GameContextType {
   error: string | null;
   socket: WebSocket | null;
   isConnected: boolean;
+  clientId: string | null; // Add clientId for WebSocket client tracking
   connectWebSocket: () => Promise<WebSocket>;
   setGameState: React.Dispatch<React.SetStateAction<GameState | null>>;
 }
@@ -23,6 +24,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
   const [error, setError] = useState<string | null>(null);
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [isConnected, setIsConnected] = useState(false);
+  const [clientId, setClientId] = useState<string | null>(null);
   const [location] = useLocation();
   
   // Store/track WebSocket instance using a ref to avoid re-renders
@@ -84,7 +86,11 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
         // Handle welcome message from server
         case GameMessageType.WELCOME:
           console.log("Connected to server:", message.payload.message);
-          // No state changes needed for the welcome message
+          // Set the client ID if provided in the welcome message
+          if (message.payload.clientId) {
+            console.log("Received client ID:", message.payload.clientId);
+            setClientId(message.payload.clientId);
+          }
           break;
           
         case GameMessageType.GAME_STATE:

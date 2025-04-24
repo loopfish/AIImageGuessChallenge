@@ -13,7 +13,7 @@ import { GameMessageType } from "@shared/schema";
 import { CrownIcon } from "lucide-react";
 
 export default function GamePlay() {
-  const { gameState, socket } = useGameContext();
+  const { gameState, socket, clientId } = useGameContext();
   const { toast } = useToast();
   const [guess, setGuess] = useState("");
   const [matchedWords, setMatchedWords] = useState<string[]>([]);
@@ -55,17 +55,24 @@ export default function GamePlay() {
       return;
     }
     
-    // Send the guess to the server with explicit player information
-    // Make sure we include all player identification to prevent misattribution
+    // Get client ID from context (for improved player identification)
+    const { clientId } = useGameContext();
+    
+    console.log(`Submitting guess as ${currentPlayer.username} (ID: ${currentPlayer.id}, Client ID: ${clientId})`);
+    
+    // Send the guess to the server with explicit player identification information
+    // Make sure we include ALL possible identification data to prevent misattribution
     socket.send(JSON.stringify({
       type: GameMessageType.SUBMIT_GUESS,
+      clientId: clientId, // Include client ID in the root of the message
       payload: {
         gameId: gameState.game.id,
         playerId: currentPlayer.id,
         roundId: currentRound.id,
         guessText: guess,
         username: currentPlayer.username, // Include username for extra validation
-        gameCode: gameState.game.code // Include game code for context
+        gameCode: gameState.game.code, // Include game code for context
+        clientId: clientId // Also include in payload for backward compatibility
       }
     }));
     

@@ -23,9 +23,10 @@ export default function HostLobby() {
   const [imageGenerated, setImageGenerated] = useState(false);
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
   
-  // Check if the user is the host - this always evaluates to true for new games
-  // since the creator is always the host
-  const isHost = true; 
+  // Check if the current player is the host by matching player IDs
+  const isHost = gameState?.players?.some(player => 
+    player.isHost && player.id === gameState.currentPlayerId
+  ) || false;
   
   // Debug logs
   console.log("Game State:", gameState);
@@ -139,11 +140,35 @@ export default function HostLobby() {
   
   if (!isHost) {
     return (
-      <div className="text-center p-6 bg-white rounded-xl shadow-md">
-        <h2 className="text-2xl font-heading font-semibold text-neutral-dark mb-4">
-          Waiting for the host to start the game...
-        </h2>
-        <Loader2 className="animate-spin h-8 w-8 mx-auto text-primary" />
+      <div className="player-lobby scale-in">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="space-y-6">
+            <div className="text-center p-8 bg-white rounded-xl shadow-md">
+              <h2 className="text-2xl font-heading font-semibold text-neutral-dark mb-3">
+                Waiting for the host to start the game
+              </h2>
+              <div className="max-w-md mx-auto">
+                <p className="text-gray-600 mb-6">
+                  The game host will set up the game and generate the first image. 
+                  Once ready, the game will automatically start for everyone.
+                </p>
+                <div className="bg-primary/10 rounded-lg p-4 inline-block mb-4">
+                  <Loader2 className="animate-spin h-8 w-8 mx-auto text-primary" />
+                </div>
+                <div className="flex justify-center items-center space-x-2 text-sm text-gray-500">
+                  <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+                  <span>Connected to game room: <span className="font-medium">{gameState?.game?.code}</span></span>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          {/* Right Column: Player Lobby */}
+          <div className="space-y-4">
+            {/* Player List */}
+            <LobbyCard />
+          </div>
+        </div>
       </div>
     );
   }

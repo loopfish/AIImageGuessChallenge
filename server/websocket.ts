@@ -414,7 +414,7 @@ async function handleStartGame(message: StartGameMessage, storage: IStorage) {
 // Handler for submitting a guess
 async function handleSubmitGuess(message: SubmitGuessMessage, storage: IStorage) {
   try {
-    const { gameId, playerId, roundId, guessText, clientId } = message.payload;
+    const { gameId, playerId, roundId, guessText, clientId, username, gameCode } = message.payload;
     
     console.log(`Processing guess from player ${playerId} in game ${gameId}, round ${roundId}: "${guessText}"`);
     
@@ -447,7 +447,18 @@ async function handleSubmitGuess(message: SubmitGuessMessage, storage: IStorage)
       }
     }
     
-    // 2. If client mapping doesn't work, try the playerId from the message directly
+    // 2. If username was provided in the message, use it to find the player
+    if (!player && username) {
+      // Case-insensitive username matching
+      player = allPlayers.find(p => 
+        p.username.toLowerCase() === username.toLowerCase()
+      );
+      if (player) {
+        console.log(`Found player by username: ${player.username} (ID: ${player.id})`);
+      }
+    }
+    
+    // 3. If client mapping doesn't work, try the playerId from the message directly
     if (!player) {
       player = allPlayers.find(p => p.id === playerId);
       if (player) {
@@ -455,7 +466,7 @@ async function handleSubmitGuess(message: SubmitGuessMessage, storage: IStorage)
       }
     }
     
-    // 3. Last resort: look through all clients for this game to find a valid player
+    // 4. Last resort: look through all clients for this game to find a valid player
     if (!player) {
       console.log(`Player not found directly. Attempting to find correct player through connected clients...`);
       

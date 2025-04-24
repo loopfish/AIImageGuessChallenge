@@ -193,6 +193,8 @@ export interface SubmitGuessMessage extends WebSocketMessage {
     roundId: number;
     guessText: string;
     clientId?: string; // Optional client ID to help with player attribution
+    username?: string; // Optional username for additional player identification
+    gameCode?: string; // Optional game code for better context
   };
 }
 

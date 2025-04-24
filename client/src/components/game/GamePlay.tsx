@@ -55,16 +55,17 @@ export default function GamePlay() {
       return;
     }
     
-    // Send the guess to the server
-    // We don't need to explicitly include clientId as the server will add it automatically
-    // But we're sending it anyway for redundancy
+    // Send the guess to the server with explicit player information
+    // Make sure we include all player identification to prevent misattribution
     socket.send(JSON.stringify({
       type: GameMessageType.SUBMIT_GUESS,
       payload: {
         gameId: gameState.game.id,
         playerId: currentPlayer.id,
         roundId: currentRound.id,
-        guessText: guess
+        guessText: guess,
+        username: currentPlayer.username, // Include username for extra validation
+        gameCode: gameState.game.code // Include game code for context
       }
     }));
     

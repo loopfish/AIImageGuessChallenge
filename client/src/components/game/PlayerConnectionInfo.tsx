@@ -31,7 +31,36 @@ export function PlayerConnectionInfo() {
     }
   }, [actualClientId]);
 
-  if (!isConnected || !currentPlayer) return null;
+  if (!isConnected) return null;
+  
+  // If no current player found but we are connected, show a loading state
+  if (!currentPlayer) {
+    return (
+      <Card className="overflow-hidden bg-white/50 backdrop-blur-sm border-amber-200">
+        <CardHeader className="p-3 bg-gradient-to-r from-amber-50 to-amber-100">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-sm font-medium text-amber-800 flex items-center">
+              <WifiIcon className="h-4 w-4 mr-1 text-amber-600" />
+              Connecting
+            </CardTitle>
+          </div>
+          <CardDescription className="text-xs text-amber-700">
+            Establishing connection...
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="p-3 text-xs">
+          <div className="flex flex-col space-y-1">
+            <div className="animate-pulse flex space-x-4">
+              <div className="flex-1 space-y-2 py-1">
+                <div className="h-2 bg-amber-100 rounded"></div>
+                <div className="h-2 bg-amber-100 rounded"></div>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="overflow-hidden bg-white/50 backdrop-blur-sm border-green-200">

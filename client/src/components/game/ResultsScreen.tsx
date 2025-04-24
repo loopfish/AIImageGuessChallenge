@@ -1,4 +1,9 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Card, CardContent } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Loader2 } from "lucide-react";
 import { useGameContext } from "@/hooks/use-game";
 import { GameMessageType } from "@shared/schema";
 import WordMatch from "./WordMatch";
@@ -15,6 +20,7 @@ interface PlayerWithMatchedWords {
 export default function ResultsScreen() {
   const { gameState, socket } = useGameContext();
   const { toast } = useToast();
+  const [nextPrompt, setNextPrompt] = useState("");
   
   if (!gameState?.game || !gameState.currentRound || !gameState.roundResults) {
     return <div>Loading results...</div>;
@@ -101,6 +107,8 @@ export default function ResultsScreen() {
   // Sort players by score for standings
   const standings = [...players].sort((a, b) => b.score - a.score);
   
+  const [isStartingNextRound, setIsStartingNextRound] = useState(false);
+  
   const handleNextRound = () => {
     console.log("Next round button clicked");
     
@@ -122,6 +130,7 @@ export default function ResultsScreen() {
       if (game.currentRound >= game.totalRounds) {
         console.log("Final round reached, ending game");
         // End the game
+        setIsStartingNextRound(true);
         const endGameMessage = JSON.stringify({
           type: GameMessageType.END_GAME,
           payload: {
@@ -131,36 +140,43 @@ export default function ResultsScreen() {
         console.log("Sending end game message:", endGameMessage);
         socket.send(endGameMessage);
       } else {
-        console.log("Prompting for next round input");
-        // Ask for prompt input for the next round
-        const promptInput = window.prompt("Enter prompt for the next round:", "");
-        console.log("User entered prompt:", promptInput);
+        console.log("Using prompt from input field:", nextPrompt);
         
-        if (promptInput && promptInput.trim()) {
-          try {
-            // Start next round
-            const nextRoundMessage = JSON.stringify({
-              type: GameMessageType.NEXT_ROUND,
-              payload: {
-                gameId: game.id,
-                prompt: promptInput
-              }
-            });
-            console.log("Sending next round message:", nextRoundMessage);
-            socket.send(nextRoundMessage);
-          } catch (error) {
-            console.error("Error sending next round message:", error);
-            toast({
-              title: "Error starting next round",
-              description: "There was a problem starting the next round. Please try again.",
-              variant: "destructive"
-            });
-          }
-        } else {
-          console.log("User cancelled or entered empty prompt");
+        if (!nextPrompt.trim()) {
+          toast({
+            title: "Empty prompt",
+            description: "Please enter a prompt for the next round",
+            variant: "destructive"
+          });
+          return;
+        }
+        
+        try {
+          // Show loading state
+          setIsStartingNextRound(true);
+          
+          // Start next round
+          const nextRoundMessage = JSON.stringify({
+            type: GameMessageType.NEXT_ROUND,
+            payload: {
+              gameId: game.id,
+              prompt: nextPrompt
+            }
+          });
+          console.log("Sending next round message:", nextRoundMessage);
+          socket.send(nextRoundMessage);
+        } catch (error) {
+          setIsStartingNextRound(false);
+          console.error("Error sending next round message:", error);
+          toast({
+            title: "Error starting next round",
+            description: "There was a problem starting the next round. Please try again.",
+            variant: "destructive"
+          });
         }
       }
     } catch (error) {
+      setIsStartingNextRound(false);
       console.error("Error in next round handler:", error);
       toast({
         title: "Error",
@@ -303,21 +319,78 @@ export default function ResultsScreen() {
             </div>
           </div>
           
-          {/* Button to Next Round */}
-          {isHost && (
+          {/* Host Next Round Controls */}
+          {isHost && game.currentRound < game.totalRounds && (
+            <Card className="mt-8 border-primary/20">
+              <CardContent className="p-6">
+                <h3 className="text-lg font-heading font-medium text-neutral-dark mb-2">
+                  Enter Prompt for Next Round
+                </h3>
+                <p className="text-sm text-gray-600 mb-4">
+                  Create a descriptive prompt for the AI to generate an image for the next round.
+                </p>
+                
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="next-prompt">Image Prompt</Label>
+                    <Textarea
+                      id="next-prompt"
+                      placeholder="e.g., 'A serene mountain lake at sunset with pine trees and snow-capped peaks'"
+                      value={nextPrompt}
+                      onChange={(e) => setNextPrompt(e.target.value)}
+                      className="min-h-[100px]"
+                      disabled={isStartingNextRound}
+                    />
+                  </div>
+                  
+                  <div className="flex justify-end">
+                    <Button
+                      onClick={handleNextRound}
+                      className="px-6"
+                      disabled={isStartingNextRound || !nextPrompt.trim()}
+                    >
+                      {isStartingNextRound ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Starting Next Round...
+                        </>
+                      ) : (
+                        "Start Next Round"
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+          
+          {/* End Game Button (Final Round) */}
+          {isHost && game.currentRound >= game.totalRounds && (
             <div className="flex justify-center mt-8">
               <Button
                 onClick={handleNextRound}
-                className="px-6 py-3 transition-all duration-200 transform hover:scale-105"
+                className="px-6 py-3 bg-accent hover:bg-accent/90 transition-all duration-200"
+                disabled={isStartingNextRound}
               >
-                {buttonText}
+                {isStartingNextRound ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Ending Game...
+                  </>
+                ) : (
+                  "End Game"
+                )}
               </Button>
             </div>
           )}
           
+          {/* Non-host waiting message */}
           {!isHost && (
-            <div className="text-center mt-8 text-gray-500">
-              Waiting for the host to continue...
+            <div className="text-center p-6 mt-8 border rounded-lg bg-gray-50">
+              <h3 className="text-lg font-medium text-gray-700 mb-2">Waiting for Host</h3>
+              <p className="text-gray-500">
+                The game host will start the next round shortly...
+              </p>
             </div>
           )}
         </div>

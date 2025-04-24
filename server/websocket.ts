@@ -348,7 +348,7 @@ async function handleJoinGame(
 // Handler for starting a game with first round
 async function handleStartGame(message: StartGameMessage, storage: IStorage) {
   try {
-    const { gameId, prompt } = message.payload;
+    const { gameId, prompt, imageUrl: existingImageUrl } = message.payload;
     console.log(`Starting game ${gameId} with prompt: "${prompt}"`);
     
     // Get the game
@@ -360,8 +360,15 @@ async function handleStartGame(message: StartGameMessage, storage: IStorage) {
     
     console.log(`Game found: ${game.code}, status: ${game.status}`);
     
-    // Generate image from Gemini API
-    const imageUrl = await generateImage(prompt);
+    // Use the existing image URL if provided, otherwise generate a new one
+    let imageUrl;
+    if (existingImageUrl) {
+      console.log(`Using existing image URL for prompt: "${prompt}"`);
+      imageUrl = existingImageUrl;
+    } else {
+      console.log(`Generating image for prompt: "${prompt}"`);
+      imageUrl = await generateImage(prompt);
+    }
     
     // Create first round
     const round = await storage.createRound({

@@ -182,6 +182,7 @@ export interface StartGameMessage extends WebSocketMessage {
   payload: {
     gameId: number;
     prompt: string;
+    imageUrl?: string; // Optional pre-generated image URL
   };
 }
 

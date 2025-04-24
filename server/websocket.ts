@@ -94,6 +94,12 @@ export function setupWebsocketHandlers(wss: WebSocketServer, storage: IStorage) 
         }
         
         const parsedMessage: WebSocketMessage = JSON.parse(message);
+        
+        // Add clientId to message payload for better player tracking
+        if (!parsedMessage.clientId) {
+          parsedMessage.clientId = clientId;
+        }
+        
         console.log(`Received message type: ${parsedMessage.type}`);
         
         // Debug special message types more verbosely
@@ -408,7 +414,7 @@ async function handleStartGame(message: StartGameMessage, storage: IStorage) {
 // Handler for submitting a guess
 async function handleSubmitGuess(message: SubmitGuessMessage, storage: IStorage) {
   try {
-    const { gameId, playerId, roundId, guessText } = message.payload;
+    const { gameId, playerId, roundId, guessText, clientId } = message.payload;
     
     console.log(`Processing guess from player ${playerId} in game ${gameId}, round ${roundId}: "${guessText}"`);
     
@@ -424,14 +430,34 @@ async function handleSubmitGuess(message: SubmitGuessMessage, storage: IStorage)
       throw new Error(`No players found for game ${gameId}`);
     }
     
-    // We want to make sure we're using the right player
-    // First, try to find the player directly
-    let player = allPlayers.find(p => p.id === playerId);
+    // IMPROVED PLAYER IDENTIFICATION:
+    // 1. First try to use the stored client mapping which is most reliable
+    let player = null;
     
-    // If player not found by ID, find the client who submitted this guess
-    // and use their player ID instead
+    // If we have a clientId, use that to find the correct player
+    if (clientId && clients.has(clientId)) {
+      const client = clients.get(clientId);
+      if (client && client.playerId) {
+        // Find this player in our game
+        const clientPlayer = allPlayers.find(p => p.id === client.playerId);
+        if (clientPlayer) {
+          player = clientPlayer;
+          console.log(`Using client-mapped player: ${player.username} (ID: ${player.id})`);
+        }
+      }
+    }
+    
+    // 2. If client mapping doesn't work, try the playerId from the message directly
     if (!player) {
-      console.log(`Player ${playerId} not found directly. Attempting to find correct player...`);
+      player = allPlayers.find(p => p.id === playerId);
+      if (player) {
+        console.log(`Using message-provided player: ${player.username} (ID: ${player.id})`);
+      }
+    }
+    
+    // 3. Last resort: look through all clients for this game to find a valid player
+    if (!player) {
+      console.log(`Player not found directly. Attempting to find correct player through connected clients...`);
       
       // Lookup all clients in this game
       const gameClients = Array.from(clients.entries())
@@ -440,9 +466,9 @@ async function handleSubmitGuess(message: SubmitGuessMessage, storage: IStorage)
       // Debug info
       console.log(`Found ${gameClients.length} clients connected to game ${gameId}`);
       
-      for (const [clientId, client] of gameClients) {
+      for (const [connClientId, client] of gameClients) {
         if (client.playerId) {
-          console.log(`Client ${clientId} is mapped to player ${client.playerId} in game ${gameId}`);
+          console.log(`Client ${connClientId} is mapped to player ${client.playerId} in game ${gameId}`);
           const possiblePlayer = allPlayers.find(p => p.id === client.playerId);
           if (possiblePlayer) {
             player = possiblePlayer;
@@ -451,10 +477,11 @@ async function handleSubmitGuess(message: SubmitGuessMessage, storage: IStorage)
           }
         }
       }
-      
-      if (!player) {
-        throw new Error(`Could not find a valid player in game ${gameId} for this guess`);
-      }
+    }
+    
+    // If we still have no player, we can't continue
+    if (!player) {
+      throw new Error(`Could not find a valid player in game ${gameId} for this guess`);
     }
     
     // Verify this player is in the correct game

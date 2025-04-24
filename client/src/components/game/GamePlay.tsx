@@ -134,22 +134,27 @@ export default function GamePlay() {
                 </div>
               </form>
               
-              {/* Guessed Words - only show count during the round, reveal at end */}
+              {/* Only show matched words at the end of the round */}
               {allMatchedWords.length > 0 && (
                 <div className="mt-4">
-                  <h4 className="text-sm font-medium text-gray-500 mb-2">
-                    {gameState?.game?.status === "round_end" ? (
-                      "Your Matched Words:"
-                    ) : (
-                      `Matched Words: ${allMatchedWords.length} (will be revealed at the end of round)`
-                    )}
-                  </h4>
-                  {gameState?.game?.status === "round_end" && (
-                    <div className="flex flex-wrap gap-2">
-                      {Array.from(new Set(allMatchedWords)).map((word, index) => (
-                        <WordMatch key={index} word={word} />
-                      ))}
-                    </div>
+                  {gameState?.game?.status === "round_end" ? (
+                    <>
+                      <h4 className="text-sm font-medium text-gray-500 mb-2">
+                        Your Matched Words:
+                      </h4>
+                      <div className="flex flex-wrap gap-2">
+                        {Array.from(new Set(allMatchedWords)).map((word, index) => (
+                          <WordMatch key={index} word={word} />
+                        ))}
+                      </div>
+                    </>
+                  ) : (
+                    <h4 className="text-sm font-medium text-gray-500">
+                      <span className="inline-flex items-center justify-center bg-purple-100 text-purple-800 rounded-full px-2 py-1 text-xs font-medium">
+                        {allMatchedWords.length} {allMatchedWords.length === 1 ? 'word' : 'words'} matched
+                      </span>
+                      <span className="ml-2">Words will be revealed at the end of the round</span>
+                    </h4>
                   )}
                 </div>
               )}

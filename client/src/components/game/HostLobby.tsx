@@ -113,6 +113,15 @@ export default function HostLobby() {
       return;
     }
     
+    // Show loading state while game starts
+    setStartingGame(true);
+    
+    // Show toast to inform user the game is starting
+    toast({
+      title: "Starting Game",
+      description: "Setting up the game and generating the first round...",
+    });
+    
     console.log(`Starting game with ID: ${gameState.game.id} and prompt: ${prompt}`);
     console.log(`Using pre-generated image URL: ${previewImageUrl}`);
     
@@ -124,6 +133,8 @@ export default function HostLobby() {
         imageUrl: previewImageUrl
       }
     }));
+    
+    // The game state will change when the server responds, which will navigate away from this screen
   };
   
   if (!isHost) {
@@ -245,11 +256,20 @@ export default function HostLobby() {
           <div className="flex justify-center">
             <Button
               onClick={handleStartGame}
-              disabled={!imageGenerated || !isConnected}
+              disabled={!imageGenerated || !isConnected || startingGame}
               className="px-6 py-7 transition-all duration-200 transform hover:scale-105"
             >
-              <PlayIcon className="h-5 w-5 mr-2" />
-              Start Game
+              {startingGame ? (
+                <>
+                  <Loader2 className="animate-spin h-5 w-5 mr-2" />
+                  Starting Game...
+                </>
+              ) : (
+                <>
+                  <PlayIcon className="h-5 w-5 mr-2" />
+                  Start Game
+                </>
+              )}
             </Button>
           </div>
         </div>

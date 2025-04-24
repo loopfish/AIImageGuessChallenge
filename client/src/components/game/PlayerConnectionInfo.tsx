@@ -2,26 +2,34 @@ import React, { useState, useEffect } from 'react';
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useGameContext } from "@/hooks/use-game";
-import { UserIcon, WifiIcon, CrownIcon } from "lucide-react";
+import { UserIcon, WifiIcon, CrownIcon, CircleIcon } from "lucide-react";
 
 /**
  * Component that displays the current player's connection information
- * This helps users verify they are properly logged in to the game
+ * and shows which players are currently online
  */
 export function PlayerConnectionInfo() {
-  const { gameState, isConnected } = useGameContext();
-  const [clientId, setClientId] = useState<string>("");
+  const { gameState, isConnected, clientId: actualClientId } = useGameContext();
+  const [displayClientId, setDisplayClientId] = useState<string>("");
   
   // Find the current player from game state
   const currentPlayer = gameState?.players?.find(p => p.id === gameState.currentPlayerId);
   
-  // Generate a clientId on component mount
+  // Get online players
+  const onlinePlayers = gameState?.onlinePlayers || [];
+  
+  // Generate a shorter clientId for display
   useEffect(() => {
-    // Generate a pseudo-random client ID for display purposes
-    // This is just for display and doesn't affect the actual clientId used by the server
-    const displayClientId = Math.random().toString(36).substring(2, 8);
-    setClientId(displayClientId);
-  }, []);
+    if (actualClientId) {
+      // Use the actual clientId but truncate it for display
+      const shortened = actualClientId.substring(0, 8) + "...";
+      setDisplayClientId(shortened);
+    } else {
+      // Fallback to random ID for display purposes
+      const random = Math.random().toString(36).substring(2, 8);
+      setDisplayClientId(random);
+    }
+  }, [actualClientId]);
 
   if (!isConnected || !currentPlayer) return null;
 
@@ -38,11 +46,14 @@ export function PlayerConnectionInfo() {
           </Badge>
         </div>
         <CardDescription className="text-xs text-green-700">
-          {isConnected ? "Active connection to game server" : "Connecting..."}
+          {isConnected ? 
+            `Active connection (${onlinePlayers.length} player${onlinePlayers.length !== 1 ? 's' : ''} online)` : 
+            "Connecting..."}
         </CardDescription>
       </CardHeader>
       <CardContent className="p-3 text-xs">
         <div className="flex flex-col space-y-1">
+          {/* Current player info */}
           <div className="flex justify-between items-center">
             <span className="font-semibold text-gray-600 flex items-center">
               {currentPlayer.isHost ? (
@@ -61,18 +72,47 @@ export function PlayerConnectionInfo() {
               )}
             </div>
           </div>
+          
+          {/* Connection info */}
           <div className="flex justify-between items-center">
             <span className="font-semibold text-gray-600">Client ID:</span>
             <code className="bg-gray-100 px-1 py-0.5 rounded text-gray-800 text-[0.65rem]">
-              {clientId}
+              {displayClientId}
             </code>
           </div>
+          
           <div className="flex justify-between items-center">
             <span className="font-semibold text-gray-600">Player ID:</span>
             <code className="bg-gray-100 px-1 py-0.5 rounded text-gray-800 text-[0.65rem]">
               {currentPlayer.id}
             </code>
           </div>
+          
+          {/* Online players status */}
+          {gameState?.players && gameState.players.length > 1 && (
+            <div className="mt-2 pt-2 border-t border-gray-100">
+              <div className="font-semibold text-gray-600 mb-1">Players Online:</div>
+              <div className="flex flex-wrap gap-1">
+                {gameState.players.map(player => {
+                  const isOnline = onlinePlayers.includes(player.id);
+                  return (
+                    <Badge 
+                      key={player.id}
+                      variant="outline" 
+                      className={`flex items-center gap-1 ${
+                        isOnline ? 'bg-green-50 text-green-800' : 'bg-gray-50 text-gray-400'
+                      }`}
+                    >
+                      <CircleIcon className={`h-2 w-2 ${
+                        isOnline ? 'text-green-500' : 'text-gray-300'
+                      }`} />
+                      {player.username}
+                    </Badge>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>

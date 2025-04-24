@@ -3,11 +3,12 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Loader2 } from "lucide-react";
+import { Loader2, Clock } from "lucide-react";
 import { useGameContext } from "@/hooks/use-game";
 import { GameMessageType } from "@shared/schema";
 import WordMatch from "./WordMatch";
 import { useToast } from "@/hooks/use-toast";
+import { format } from "date-fns";
 
 interface PlayerWithMatchedWords {
   id: number;
@@ -15,6 +16,7 @@ interface PlayerWithMatchedWords {
   matchedWords: string[];
   place: number;
   points: number;
+  submittedAt?: Date; // Add submission timestamp
 }
 
 export default function ResultsScreen() {
@@ -80,7 +82,8 @@ export default function ResultsScreen() {
       username: firstPlace.username,
       matchedWords: firstPlaceGuess.matchedWords || [],
       place: 1,
-      points: 3
+      points: 3,
+      submittedAt: firstPlaceGuess.submittedAt ? new Date(firstPlaceGuess.submittedAt) : undefined
     });
   }
   
@@ -90,7 +93,8 @@ export default function ResultsScreen() {
       username: secondPlace.username,
       matchedWords: secondPlaceGuess.matchedWords || [],
       place: 2,
-      points: 2
+      points: 2,
+      submittedAt: secondPlaceGuess.submittedAt ? new Date(secondPlaceGuess.submittedAt) : undefined
     });
   }
   
@@ -100,7 +104,8 @@ export default function ResultsScreen() {
       username: thirdPlace.username,
       matchedWords: thirdPlaceGuess.matchedWords || [],
       place: 3,
-      points: 1
+      points: 1,
+      submittedAt: thirdPlaceGuess.submittedAt ? new Date(thirdPlaceGuess.submittedAt) : undefined
     });
   }
   
@@ -211,12 +216,15 @@ export default function ResultsScreen() {
                     {secondPlace.username.substring(0, 2).toUpperCase()}
                   </div>
                 </div>
-                <div className="bg-secondary h-24 w-24 rounded-t-lg flex flex-col items-center justify-center px-2">
+                <div className="bg-secondary h-28 w-24 rounded-t-lg flex flex-col items-center justify-center px-2">
                   <div className="bg-white rounded-full w-8 h-8 flex items-center justify-center mb-1">
                     <span className="text-secondary font-bold">2</span>
                   </div>
                   <span className="text-white font-medium text-sm truncate w-full">{secondPlace.username}</span>
                   <span className="text-white text-xs">+2 pts</span>
+                  {secondPlaceGuess?.submittedAt && (
+                    <span className="text-white/80 text-[0.6rem] mt-1">{format(new Date(secondPlaceGuess.submittedAt), 'h:mm:ss a')}</span>
+                  )}
                 </div>
               </div>
             )}
@@ -229,12 +237,15 @@ export default function ResultsScreen() {
                     {firstPlace.username.substring(0, 2).toUpperCase()}
                   </div>
                 </div>
-                <div className="bg-primary h-32 w-32 rounded-t-lg flex flex-col items-center justify-center px-2">
+                <div className="bg-primary h-36 w-32 rounded-t-lg flex flex-col items-center justify-center px-2">
                   <div className="bg-white rounded-full w-10 h-10 flex items-center justify-center mb-1">
                     <span className="text-primary font-bold">1</span>
                   </div>
                   <span className="text-white font-medium truncate w-full">{firstPlace.username}</span>
                   <span className="text-white text-sm">+3 pts</span>
+                  {firstPlaceGuess?.submittedAt && (
+                    <span className="text-white/80 text-[0.65rem] mt-1">{format(new Date(firstPlaceGuess.submittedAt), 'h:mm:ss a')}</span>
+                  )}
                 </div>
               </div>
             )}
@@ -247,12 +258,15 @@ export default function ResultsScreen() {
                     {thirdPlace.username.substring(0, 2).toUpperCase()}
                   </div>
                 </div>
-                <div className="bg-accent h-20 w-20 rounded-t-lg flex flex-col items-center justify-center px-2">
+                <div className="bg-accent h-24 w-20 rounded-t-lg flex flex-col items-center justify-center px-2">
                   <div className="bg-white rounded-full w-7 h-7 flex items-center justify-center mb-1">
                     <span className="text-accent font-bold">3</span>
                   </div>
                   <span className="text-white font-medium text-xs truncate w-full">{thirdPlace.username}</span>
                   <span className="text-white text-xs">+1 pt</span>
+                  {thirdPlaceGuess?.submittedAt && (
+                    <span className="text-white/80 text-[0.6rem] mt-1">{format(new Date(thirdPlaceGuess.submittedAt), 'h:mm:ss a')}</span>
+                  )}
                 </div>
               </div>
             )}
@@ -275,6 +289,15 @@ export default function ResultsScreen() {
                         {result.matchedWords.length} words
                       </span>
                     </div>
+                    
+                    {/* Time of submission */}
+                    {result.submittedAt && (
+                      <div className="flex items-center text-xs text-gray-500 mb-2">
+                        <Clock className="h-3 w-3 mr-1" /> 
+                        <span>Submitted: {format(result.submittedAt, 'h:mm:ss a')}</span>
+                      </div>
+                    )}
+                    
                     <div className="flex flex-wrap gap-2">
                       {result.matchedWords.map((word, wordIndex) => (
                         <WordMatch key={wordIndex} word={word} />

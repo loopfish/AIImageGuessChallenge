@@ -19,6 +19,7 @@ export default function HostLobby() {
   const [timerSeconds, setTimerSeconds] = useState("60");
   const [totalRounds, setTotalRounds] = useState("5");
   const [generating, setGenerating] = useState(false);
+  const [startingGame, setStartingGame] = useState(false);
   const [imageGenerated, setImageGenerated] = useState(false);
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
   

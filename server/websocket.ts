@@ -421,9 +421,12 @@ async function handleStartGame(message: StartGameMessage, storage: IStorage) {
 // Handler for submitting a guess
 async function handleSubmitGuess(message: SubmitGuessMessage, storage: IStorage) {
   try {
-    const { gameId, playerId, roundId, guessText, clientId, username, gameCode } = message.payload;
+    const { gameId, playerId, roundId, guessText, username, gameCode } = message.payload;
+    // Get the clientId from the message object - should have been set during message parsing
+    const socketClientId = message.clientId;
     
-    console.log(`Processing guess from player ${playerId} in game ${gameId}, round ${roundId}: "${guessText}"`);
+    // Log incoming request with clientId for tracing
+    console.log(`Processing guess from client ${socketClientId} in game ${gameId}, round ${roundId}: "${guessText}"`);
     
     // Get the round
     const round = await storage.getRound(roundId);
@@ -438,23 +441,23 @@ async function handleSubmitGuess(message: SubmitGuessMessage, storage: IStorage)
     }
     
     // IMPROVED PLAYER IDENTIFICATION:
-    // 1. First try to use the stored client mapping which is most reliable
+    // 1. First try to use the socket's clientId (most reliable)
     let player = null;
     
-    // If we have a clientId, use that to find the correct player
-    if (clientId && clients.has(clientId)) {
-      const client = clients.get(clientId);
+    // If we have a clientId from the socket connection itself
+    if (socketClientId && clients.has(socketClientId)) {
+      const client = clients.get(socketClientId);
       if (client && client.playerId) {
         // Find this player in our game
         const clientPlayer = allPlayers.find(p => p.id === client.playerId);
         if (clientPlayer) {
           player = clientPlayer;
-          console.log(`Using client-mapped player: ${player.username} (ID: ${player.id})`);
+          console.log(`Using socket client-mapped player: ${player.username} (ID: ${player.id}), Socket ClientID: ${socketClientId}`);
         }
       }
     }
     
-    // 2. If username was provided in the message, use it to find the player
+    // 2. If username was provided in the message, use it to find the player (second most reliable)
     if (!player && username) {
       // Case-insensitive username matching
       player = allPlayers.find(p => 
@@ -465,7 +468,7 @@ async function handleSubmitGuess(message: SubmitGuessMessage, storage: IStorage)
       }
     }
     
-    // 3. If client mapping doesn't work, try the playerId from the message directly
+    // 3. Try the playerId from the message directly (less reliable)
     if (!player) {
       player = allPlayers.find(p => p.id === playerId);
       if (player) {
@@ -490,16 +493,17 @@ async function handleSubmitGuess(message: SubmitGuessMessage, storage: IStorage)
           const possiblePlayer = allPlayers.find(p => p.id === client.playerId);
           if (possiblePlayer) {
             player = possiblePlayer;
-            console.log(`Remapped guess to player ${player.username} (ID: ${player.id})`);
+            console.log(`Using connected client's player: ${player.username} (ID: ${player.id})`);
             break;
           }
         }
       }
     }
     
-    // If we still have no player, we can't continue
+    // Never default to the host - if we can't determine the player, fail
     if (!player) {
-      throw new Error(`Could not find a valid player in game ${gameId} for this guess`);
+      console.error(`Player identification failed for guess. Socket ClientID: ${socketClientId}, Game: ${gameId}`);
+      throw new Error(`Could not determine which player submitted this guess`);
     }
     
     // Verify this player is in the correct game

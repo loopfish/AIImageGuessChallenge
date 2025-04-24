@@ -1,7 +1,4 @@
-import fetch from "node-fetch";
-
-// Google Gemini 2.0 Flash API URL (as requested)
-const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 // Function to generate an image from a prompt
 export async function generateImage(prompt: string): Promise<string> {
@@ -18,85 +15,57 @@ export async function generateImage(prompt: string): Promise<string> {
     }
 
     try {
-      console.log(`DEBUG: Generating image for prompt: "${prompt}" using Gemini API for keyword extraction`);
+      console.log(`DEBUG: Generating image for prompt: "${prompt}" using Google Generative AI SDK`);
       
-      // Use the Gemini 2.0 Flash API to get better keywords
-      const geminiUrl = `${GEMINI_API_URL}?key=${apiKey}`;
-      console.log("DEBUG: Using Gemini URL:", geminiUrl);
+      // Initialize the Gemini API client using the SDK
+      const genAI = new GoogleGenerativeAI(apiKey);
       
-      // Request payload for Gemini
-      const requestBody = {
-        contents: [{
-          parts: [{
-            text: `Extract exactly 5 specific and descriptive keywords from this prompt that would be most useful for finding a striking, relevant image: "${prompt}". 
-            Return ONLY a comma-separated list of keywords, with no additional text, explanation or formatting.`
-          }]
-        }],
-        generationConfig: {
-          temperature: 0.1,
-          maxOutputTokens: 50,
-          topP: 0.8,
-          topK: 10
-        }
+      // For debugging
+      console.log("DEBUG: Successfully initialized GoogleGenerativeAI client");
+      
+      // Get the model - using gemini-2.0-flash (released after your knowledge cutoff)
+      const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+      
+      // Create the prompt for keyword extraction
+      const promptText = `Extract exactly 5 specific and descriptive keywords from this prompt that would be most useful for finding a striking, relevant image: "${prompt}". 
+      Return ONLY a comma-separated list of keywords, with no additional text, explanation or formatting.`;
+      
+      // Configuration for generation
+      const generationConfig = {
+        temperature: 0.1,
+        maxOutputTokens: 50,
+        topP: 0.8,
+        topK: 10
       };
       
-      console.log("DEBUG: Request body:", JSON.stringify(requestBody));
+      console.log("DEBUG: Calling Gemini API with SDK...");
       
-      // Request to extract keywords with Gemini 2.0 Flash
-      const response = await fetch(geminiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(requestBody)
+      // Generate content with Gemini
+      const result = await model.generateContent({
+        contents: [{ role: "user", parts: [{ text: promptText }] }],
+        generationConfig
       });
       
-      console.log("DEBUG: Gemini API response status:", response.status);
+      // Get the response
+      const response = result.response;
+      console.log("DEBUG: Received response from Gemini API");
       
-      if (!response.ok) {
-        const errorData = await response.text();
-        console.error(`Gemini API error (${response.status}):`, errorData);
-        throw new Error(`Gemini API returned error ${response.status}`);
-      }
-
-      // Process the response to get keywords
-      const responseText = await response.text();
-      console.log("DEBUG: Raw Gemini API response:", responseText);
-      
-      const responseData = JSON.parse(responseText);
+      // Extract the text content
       let keywords = prompt; // Default to original prompt if extraction fails
       
-      try {
-        console.log("DEBUG: Attempting to parse Gemini response");
-        // Safely access nested properties with proper type checking
-        if (responseData && 
-            typeof responseData === 'object' &&
-            responseData.candidates && 
-            Array.isArray(responseData.candidates) &&
-            responseData.candidates[0] && 
-            typeof responseData.candidates[0] === 'object' &&
-            responseData.candidates[0].content && 
-            typeof responseData.candidates[0].content === 'object' &&
-            responseData.candidates[0].content.parts &&
-            Array.isArray(responseData.candidates[0].content.parts) &&
-            responseData.candidates[0].content.parts[0] &&
-            typeof responseData.candidates[0].content.parts[0] === 'object' &&
-            responseData.candidates[0].content.parts[0].text &&
-            typeof responseData.candidates[0].content.parts[0].text === 'string') {
-          
-          // Get the extracted keywords
-          keywords = responseData.candidates[0].content.parts[0].text.trim();
+      if (response && response.text) {
+        const text = response.text();
+        if (text) {
+          keywords = text.trim();
           console.log(`DEBUG: Successfully extracted keywords: ${keywords}`);
         } else {
-          console.log("DEBUG: Could not find expected keywords in response structure");
-          console.log("DEBUG: Response structure:", JSON.stringify(responseData));
+          console.log("DEBUG: Empty response text from Gemini API");
         }
-      } catch (parseError) {
-        console.error("Error parsing Gemini API keyword response:", parseError);
+      } else {
+        console.log("DEBUG: Could not extract text from Gemini API response");
       }
       
       // Use Picsum to generate a random image
-      // Since Unsplash API is not working properly, we'll use LoremPicsum with enhanced styling
       try {
         // Create a unique seed from the keywords to get consistent but varied images
         const seed = createSeedFromKeywords(keywords);

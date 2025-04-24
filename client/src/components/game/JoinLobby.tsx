@@ -18,6 +18,8 @@ export default function JoinLobby() {
   const [gameCode, setGameCode] = useState("");
   const [isJoining, setIsJoining] = useState(false);
 
+  const { setGameState } = useGameContext();
+  
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     
@@ -42,6 +44,24 @@ export default function JoinLobby() {
     setIsJoining(true);
     
     try {
+      // Set a preliminary game state to ensure the connection panel shows
+      // This will be replaced when the server responds with the full game state
+      setGameState({
+        game: { 
+          code: gameCode,
+          id: 0, // Placeholder values for required properties
+          hostId: 0,
+          status: "connecting",
+          currentRound: 0,
+          totalRounds: 0,
+          timerSeconds: 60,
+          createdAt: new Date()
+        },
+        players: [],
+        isConnecting: true, // Special flag to indicate we're in the connecting state
+        onlinePlayers: []
+      });
+      
       // Join the game via WebSocket
       socket.send(JSON.stringify({
         type: GameMessageType.JOIN_GAME,

@@ -33,8 +33,11 @@ export function PlayerConnectionInfo() {
 
   if (!isConnected) return null;
   
-  // If no current player found but we are connected, show a loading state
-  if (!currentPlayer) {
+  // Check for the special isConnecting flag
+  const isConnecting = Boolean((gameState as any)?.isConnecting);
+  
+  // If we're connecting or no currentPlayer is found but we're connected, show a connecting state
+  if ((gameState as any)?.isConnecting || (!currentPlayer && isConnected)) {
     return (
       <Card className="overflow-hidden bg-white/50 backdrop-blur-sm border-amber-200">
         <CardHeader className="p-3 bg-gradient-to-r from-amber-50 to-amber-100">
@@ -43,9 +46,14 @@ export function PlayerConnectionInfo() {
               <WifiIcon className="h-4 w-4 mr-1 text-amber-600" />
               Connecting
             </CardTitle>
+            {gameState?.game?.code && (
+              <Badge variant="outline" className="bg-amber-100 text-amber-800 hover:bg-amber-200">
+                {gameState.game.code}
+              </Badge>
+            )}
           </div>
           <CardDescription className="text-xs text-amber-700">
-            Establishing connection...
+            Joining game...
           </CardDescription>
         </CardHeader>
         <CardContent className="p-3 text-xs">
@@ -61,6 +69,9 @@ export function PlayerConnectionInfo() {
       </Card>
     );
   }
+
+  // Safety check - currentPlayer should be defined at this point
+  if (!currentPlayer) return null;
 
   return (
     <Card className="overflow-hidden bg-white/50 backdrop-blur-sm border-green-200">
@@ -85,16 +96,16 @@ export function PlayerConnectionInfo() {
           {/* Current player info */}
           <div className="flex justify-between items-center">
             <span className="font-semibold text-gray-600 flex items-center">
-              {currentPlayer.isHost ? (
+              {currentPlayer?.isHost ? (
                 <CrownIcon className="h-3 w-3 mr-1 text-amber-500" />
               ) : (
                 <UserIcon className="h-3 w-3 mr-1" />
               )}
-              {currentPlayer.isHost ? "Host:" : "Player:"}
+              {currentPlayer?.isHost ? "Host:" : "Player:"}
             </span>
             <div className="flex items-center gap-1">
               <span className="text-gray-900">{currentPlayer.username}</span>
-              {currentPlayer.isHost && (
+              {currentPlayer?.isHost && (
                 <Badge className="text-[0.6rem] px-1 py-0 h-4 bg-amber-100 text-amber-800 hover:bg-amber-200">
                   HOST
                 </Badge>

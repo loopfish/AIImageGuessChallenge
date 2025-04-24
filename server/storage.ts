@@ -15,6 +15,7 @@ export interface IStorage {
   getGame(id: number): Promise<Game | undefined>;
   getGameByCode(code: string): Promise<Game | undefined>;
   updateGame(id: number, game: Partial<Game>): Promise<Game>;
+  resetAllActiveGames(): Promise<void>;
   
   // Round methods
   createRound(round: InsertRound): Promise<Round>;
@@ -308,6 +309,37 @@ export class MemStorage implements IStorage {
     const updatedGame = { ...game, ...updateData };
     this.games.set(id, updatedGame);
     return updatedGame;
+  }
+  
+  async resetAllActiveGames(): Promise<void> {
+    console.log('Resetting all active games...');
+    
+    // Get all active games
+    const activeGames = Array.from(this.games.values()).filter(
+      game => game.status !== 'ended'
+    );
+    
+    // Mark all as ended
+    for (const game of activeGames) {
+      console.log(`Resetting game ${game.code} (ID: ${game.id})`);
+      this.games.set(game.id, {
+        ...game,
+        status: 'ended'
+      });
+    }
+    
+    // Also reset all players to inactive
+    Array.from(this.players.values()).forEach(player => {
+      this.players.set(player.id, {
+        ...player,
+        isActive: false
+      });
+    });
+    
+    // Save changes to disk
+    await this.saveToDisk();
+    
+    console.log(`Reset ${activeGames.length} active games and all players`);
   }
   
   // Round methods

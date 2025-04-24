@@ -1,6 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { storage } from "./storage";
 
 const app = express();
 app.use(express.json());
@@ -38,6 +39,25 @@ app.use((req, res, next) => {
 
 (async () => {
   const server = await registerRoutes(app);
+  
+  // Setup server shutdown handler
+  const gracefulShutdown = () => {
+    console.log('Server is shutting down gracefully...');
+    // Mark all games as inactive
+    storage.resetAllActiveGames()
+      .then(() => {
+        console.log('All games have been reset');
+        process.exit(0);
+      })
+      .catch(err => {
+        console.error('Error resetting games:', err);
+        process.exit(1);
+      });
+  };
+
+  // Listen for termination signals
+  process.on('SIGTERM', gracefulShutdown);
+  process.on('SIGINT', gracefulShutdown);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;

@@ -18,6 +18,7 @@ export default function HostLobby() {
   const [totalRounds, setTotalRounds] = useState("5");
   const [generating, setGenerating] = useState(false);
   const [imageGenerated, setImageGenerated] = useState(false);
+  const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
   
   // Check if the user is the host - this always evaluates to true for new games
   // since the creator is always the host
@@ -62,11 +63,9 @@ export default function HostLobby() {
         // in the round object when the game starts
         setGenerating(false);
         setImageGenerated(true);
+        setPreviewImageUrl(data.imageUrl);
         
         console.log("Generated image URL:", data.imageUrl);
-        
-        // No need to set the image URL here as it will be handled by the server
-        // when the game starts
       } else {
         throw new Error("No image URL in the response");
       }
@@ -228,7 +227,7 @@ export default function HostLobby() {
                 {/* Image will be loaded from gameState?.currentRound?.imageUrl when available */}
                 <img 
                   className={`object-contain w-full h-full ${generating ? 'hidden' : 'block'}`} 
-                  src={gameState?.currentRound?.imageUrl || "https://placehold.co/800x600/5D3FD3/FFFFFF"} 
+                  src={previewImageUrl || gameState?.currentRound?.imageUrl || "https://placehold.co/800x600/5D3FD3/FFFFFF"} 
                   alt="AI-generated image based on prompt" 
                 />
               </div>

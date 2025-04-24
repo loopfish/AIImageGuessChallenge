@@ -64,6 +64,34 @@ export default function JoinLobby() {
     }
   };
 
+  const { gameState, isConnected } = useGameContext();
+  
+  // Show connection info if the player has already joined a game
+  if (gameState?.currentPlayerId && isConnected) {
+    return (
+      <div className="max-w-md mx-auto space-y-4">
+        <PlayerConnectionInfo />
+        
+        <Card>
+          <CardHeader>
+            <h2 className="text-xl font-heading font-semibold text-center text-green-800">
+              Connected to Game
+            </h2>
+          </CardHeader>
+          <CardContent className="text-center">
+            <p className="mb-4">You've joined the game successfully!</p>
+            <Button 
+              onClick={() => navigate(`/game/${gameState.game?.code}`)}
+              className="w-full"
+            >
+              Go to Game
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+  
   return (
     <Card className="max-w-md mx-auto">
       <CardHeader>

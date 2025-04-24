@@ -157,6 +157,7 @@ export interface GameState {
 export interface WebSocketMessage {
   type: GameMessageType;
   payload: any;
+  clientId?: string; // Client ID for accurate player tracking
 }
 
 export interface CreateGameMessage extends WebSocketMessage {
@@ -191,6 +192,7 @@ export interface SubmitGuessMessage extends WebSocketMessage {
     playerId: number;
     roundId: number;
     guessText: string;
+    clientId?: string; // Optional client ID to help with player attribution
   };
 }
 

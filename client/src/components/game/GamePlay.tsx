@@ -47,6 +47,8 @@ export default function GamePlay() {
     }
     
     // Send the guess to the server
+    // We don't need to explicitly include clientId as the server will add it automatically
+    // But we're sending it anyway for redundancy
     socket.send(JSON.stringify({
       type: GameMessageType.SUBMIT_GUESS,
       payload: {

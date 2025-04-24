@@ -36,6 +36,10 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
   const reconnectTimer = useRef<NodeJS.Timeout | null>(null);
   const isReconnecting = useRef(false);
   
+  // Track heartbeat timing
+  const heartbeatTimer = useRef<NodeJS.Timeout | null>(null);
+  const lastHeartbeatTime = useRef<number>(0);
+  
   // Extract game code from URL
   const gameCode = useMemo(() => {
     const urlParts = location.split('/');
@@ -156,6 +160,22 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
           
         case GameMessageType.RECONNECT_FAILURE:
           setError(`Reconnection failed: ${message.payload.message}`);
+          break;
+          
+        case GameMessageType.HEARTBEAT_RESPONSE:
+          // Update last heartbeat response time
+          lastHeartbeatTime.current = message.payload.timestamp;
+          break;
+          
+        case GameMessageType.PLAYERS_ONLINE_UPDATE:
+          // Update online players list
+          setGameState(prev => {
+            if (!prev) return prev;
+            return {
+              ...prev,
+              onlinePlayers: message.payload.onlinePlayers
+            };
+          });
           break;
       }
     } catch (error) {
@@ -352,6 +372,11 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
       if (reconnectTimer.current) {
         clearTimeout(reconnectTimer.current);
       }
+      
+      if (heartbeatTimer.current) {
+        clearInterval(heartbeatTimer.current);
+        heartbeatTimer.current = null;
+      }
     };
   }, []);
   
@@ -441,6 +466,48 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
       hasFetchedRef.current = false;
     }
   }, [location, gameCode]);
+  
+  // Heartbeat mechanism to maintain connection and update online status
+  useEffect(() => {
+    // Only send heartbeats when connected and in a game
+    if (!isConnected || !socketRef.current || !gameState?.game?.id || !gameState.currentPlayerId) {
+      return;
+    }
+    
+    const sendHeartbeat = () => {
+      if (socketRef.current?.readyState === WebSocket.OPEN) {
+        try {
+          const heartbeatMessage = {
+            type: GameMessageType.HEARTBEAT,
+            payload: {
+              playerId: gameState.currentPlayerId,
+              gameId: gameState.game.id,
+              timestamp: Date.now()
+            }
+          };
+          
+          socketRef.current.send(JSON.stringify(heartbeatMessage));
+          console.log("Heartbeat sent", heartbeatMessage.payload);
+        } catch (error) {
+          console.error("Error sending heartbeat:", error);
+        }
+      }
+    };
+    
+    // Send an immediate heartbeat
+    sendHeartbeat();
+    
+    // Setup interval for regular heartbeats (every 15 seconds)
+    const interval = setInterval(sendHeartbeat, 15000);
+    heartbeatTimer.current = interval;
+    
+    return () => {
+      if (heartbeatTimer.current) {
+        clearInterval(heartbeatTimer.current);
+        heartbeatTimer.current = null;
+      }
+    };
+  }, [isConnected, gameState?.game?.id, gameState?.currentPlayerId]);
   
   // Prevent unnecessary WebSocket reconnections
   useEffect(() => {

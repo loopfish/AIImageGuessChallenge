@@ -232,6 +232,26 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
             window.location.href = "/";
           }, 1000);
           break;
+          
+        case GameMessageType.SERVER_RESTART:
+          // Server is restarting, show toast and redirect all clients to home page
+          console.log("Server restart notification received:", message.payload.message);
+          
+          // Show toast message to inform the user
+          toast({
+            title: "Server Restarting",
+            description: "The server is restarting. You will be redirected to the home page.",
+            variant: "default",
+          });
+          
+          // Reset the game state
+          setGameState(null);
+          
+          // Navigate to home page after a brief delay
+          setTimeout(() => {
+            window.location.href = "/";
+          }, 1500);
+          break;
       }
     } catch (error) {
       console.error("Error handling message:", error);

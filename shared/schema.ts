@@ -120,7 +120,10 @@ export enum GameMessageType {
   PLAYERS_ONLINE_UPDATE = "players_online_update",
   
   // Server connection notification
-  WELCOME = "welcome"
+  WELCOME = "welcome",
+  
+  // Server restart notification
+  SERVER_RESTART = "server_restart"
 }
 
 // Types
@@ -297,6 +300,13 @@ export interface WelcomeMessage extends WebSocketMessage {
 
 export interface GameResetMessage extends WebSocketMessage {
   type: GameMessageType.GAME_RESET;
+  payload: {
+    message: string;
+  };
+}
+
+export interface ServerRestartMessage extends WebSocketMessage {
+  type: GameMessageType.SERVER_RESTART;
   payload: {
     message: string;
   };

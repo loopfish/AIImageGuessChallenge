@@ -65,7 +65,7 @@ function broadcastServerRestart() {
   
   // Broadcast to all clients
   const restartMessage: WebSocketMessage = {
-    type: "server_restart",
+    type: GameMessageType.SERVER_RESTART,
     payload: { message: "Server is restarting. You will be redirected to the home page." }
   };
   

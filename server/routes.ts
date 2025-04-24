@@ -3,7 +3,8 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { WebSocketServer } from "ws";
 import { setupWebsocketHandlers } from "./websocket";
-import { generateImage } from "./gemini";
+// Import the new Gemini implementation
+import { generateImage } from "./new-gemini";
 import { z } from "zod";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { testGeminiImageGeneration } from "./test-gemini-image";

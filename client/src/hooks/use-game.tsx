@@ -114,7 +114,19 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
             }
           }
           
-          setGameState(gameData);
+          // Update the game state while preserving the isConnecting flag
+          // Only clear isConnecting when we have actual player data
+          setGameState(prev => {
+            const hasPlayerData = gameData?.players?.length > 0 && gameData?.currentPlayerId;
+            const shouldStayConnecting = (prev?.isConnecting && !hasPlayerData);
+            
+            // Preserve the isConnecting flag if we're in connecting state and don't have player data
+            return {
+              ...gameData,
+              isConnecting: shouldStayConnecting ? true : false
+            };
+          });
+          
           setLoading(false);
           break;
           
@@ -189,18 +201,42 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
         case GameMessageType.PLAYER_JOINED:
           // Handle specific player joined response
           console.log("Player joined response:", message.payload);
+          
           // Save the player ID in local storage
           if (message.payload.success && message.payload.playerId) {
             saveCurrentPlayerToStorage(message.payload.playerId);
             
-            // Update the current player ID in the game state
+            // Update the game state - keep isConnecting flag until full game state arrives
             setGameState(prev => {
-              if (!prev) return prev;
+              if (!prev) {
+                // If we don't have a previous state, create a minimal one
+                return {
+                  game: { 
+                    code: message.payload.gameCode,
+                    id: 0, 
+                    hostId: 0,
+                    status: "connecting",
+                    currentRound: 0,
+                    totalRounds: 0,
+                    timerSeconds: 60,
+                    createdAt: new Date()
+                  },
+                  players: [],
+                  currentPlayerId: message.payload.playerId,
+                  isConnecting: true,
+                  onlinePlayers: []
+                };
+              }
+              
+              // Otherwise update the existing state
               return {
                 ...prev,
-                currentPlayerId: message.payload.playerId
+                currentPlayerId: message.payload.playerId,
+                isConnecting: true
               };
             });
+            
+            console.log("Player joined, setting connection state");
           }
           break;
           

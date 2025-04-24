@@ -44,8 +44,9 @@ export default function JoinLobby() {
     setIsJoining(true);
     
     try {
-      // Set a preliminary game state to ensure the connection panel shows
-      // This will be replaced when the server responds with the full game state
+      // Set a preliminary game state to ensure the connection panel shows right away
+      // This will be enhanced by the PLAYER_JOINED message and then replaced 
+      // when the full GAME_STATE arrives from the server
       setGameState({
         game: { 
           code: gameCode,
@@ -61,6 +62,8 @@ export default function JoinLobby() {
         isConnecting: true, // Special flag to indicate we're in the connecting state
         onlinePlayers: []
       });
+      
+      console.log("Set preliminary game state with isConnecting=true");
       
       // Join the game via WebSocket
       socket.send(JSON.stringify({
@@ -86,8 +89,10 @@ export default function JoinLobby() {
 
   const { gameState, isConnected } = useGameContext();
   
-  // Show connection info if the player has already joined a game
-  if (gameState?.currentPlayerId && isConnected) {
+  // Show connection info if either:
+  // 1. Player has already joined a game with a player ID
+  // 2. Player is in connecting state during join process
+  if ((gameState?.currentPlayerId || gameState?.isConnecting) && isConnected) {
     return (
       <div className="max-w-md mx-auto space-y-4">
         <PlayerConnectionInfo />
@@ -95,11 +100,15 @@ export default function JoinLobby() {
         <Card>
           <CardHeader>
             <h2 className="text-xl font-heading font-semibold text-center text-green-800">
-              Connected to Game
+              {gameState?.isConnecting ? "Joining Game..." : "Connected to Game"}
             </h2>
           </CardHeader>
           <CardContent className="text-center">
-            <p className="mb-4">You've joined the game successfully!</p>
+            <p className="mb-4">
+              {gameState?.isConnecting 
+                ? "Establishing connection..." 
+                : "You've joined the game successfully!"}
+            </p>
             <Button 
               onClick={() => navigate(`/game/${gameState.game?.code}`)}
               className="w-full"

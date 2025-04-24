@@ -504,6 +504,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Simple API test for our new image generator
   app.post("/api/test-image", testImageGeneration);
+  
+  // API endpoint to test server restart functionality
+  app.post("/api/admin/restart", async (req, res) => {
+    try {
+      console.log("Server restart requested from admin endpoint");
+      
+      // Check authorization (for testing purposes)
+      const authKey = req.query.key;
+      if (authKey !== "devtest") {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+      
+      // Send restart response first
+      res.json({ message: "Server restart initiated" });
+      
+      // Wait 1 second to allow response to be sent
+      setTimeout(() => {
+        console.log("Initiating graceful server restart...");
+        
+        // Broadcast restart message if the function exists
+        if (typeof (global as any).broadcastServerRestart === 'function') {
+          console.log('Broadcasting server restart message to clients...');
+          (global as any).broadcastServerRestart();
+        }
+        
+        // Reset all active games
+        storage.resetAllActiveGames()
+          .then(() => {
+            console.log('All games have been reset');
+            console.log('Server restart test completed');
+          })
+          .catch(err => {
+            console.error('Error resetting games:', err);
+          });
+      }, 1000);
+    } catch (error) {
+      console.error("Error initiating server restart:", error);
+      res.status(500).json({ message: "Failed to initiate server restart" });
+    }
+  });
 
   return httpServer;
 }

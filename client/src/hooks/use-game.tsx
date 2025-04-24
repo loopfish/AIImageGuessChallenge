@@ -162,12 +162,21 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
           setError(`Reconnection failed: ${message.payload.message}`);
           break;
           
-        case "player_joined":
+        case GameMessageType.PLAYER_JOINED:
           // Handle specific player joined response
           console.log("Player joined response:", message.payload);
           // Save the player ID in local storage
           if (message.payload.success && message.payload.playerId) {
             saveCurrentPlayerToStorage(message.payload.playerId);
+            
+            // Update the current player ID in the game state
+            setGameState(prev => {
+              if (!prev) return prev;
+              return {
+                ...prev,
+                currentPlayerId: message.payload.playerId
+              };
+            });
           }
           break;
           

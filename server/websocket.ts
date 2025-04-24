@@ -284,6 +284,16 @@ async function handleJoinGame(
     if (client) {
       client.gameId = game.id;
       client.playerId = player.id;
+      client.connectionTime = Date.now();
+      client.lastActive = Date.now();
+      
+      // Add player to online players set for this game
+      let onlinePlayersForGame = onlinePlayers.get(game.id);
+      if (!onlinePlayersForGame) {
+        onlinePlayersForGame = new Set<number>();
+        onlinePlayers.set(game.id, onlinePlayersForGame);
+      }
+      onlinePlayersForGame.add(player.id);
     }
     
     // Add client to game clients map
@@ -305,7 +315,7 @@ async function handleJoinGame(
     const joiningClient = clients.get(clientId);
     if (joiningClient && joiningClient.socket.readyState === WebSocket.OPEN) {
       joiningClient.socket.send(JSON.stringify({
-        type: "player_joined",
+        type: GameMessageType.PLAYER_JOINED,
         payload: { 
           success: true,
           playerId: player.id,
@@ -314,6 +324,9 @@ async function handleJoinGame(
         }
       }));
     }
+    
+    // Broadcast the online players status
+    updateOnlinePlayersStatus(game.id);
     
     // Send complete game state to the new client
     sendGameStateToClient(clientId, game.id, storage);

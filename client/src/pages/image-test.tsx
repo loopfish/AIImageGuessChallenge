@@ -26,18 +26,20 @@ export default function ImageTest() {
     addLog(`Generating image for prompt: "${prompt}"...`);
 
     try {
-      const response = await apiRequest({
-        url: "/api/test-image",
-        method: "POST",
-        body: { prompt },
-      });
+      const response = await apiRequest(
+        "POST",
+        "/api/test-image",
+        { prompt }
+      );
 
-      if (!response || response.error) {
-        throw new Error(response?.error || "Failed to generate image");
+      const data = await response.json() as { success?: boolean; error?: string; imageUrl?: string };
+      
+      if (!data || !data.success || data.error) {
+        throw new Error(data?.error || "Failed to generate image");
       }
 
       addLog("Successfully generated image!");
-      setImageUrl(response.imageUrl || "");
+      setImageUrl(data.imageUrl || "");
     } catch (err: any) {
       console.error("Error generating image:", err);
       setError(err.message || "Failed to generate image");

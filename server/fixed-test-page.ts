@@ -116,7 +116,7 @@ export function renderFixedTestPage() {
           
           if (data.success) {
             // Then redirect to the game join page
-            window.location.href = '/#/join/TESTGAME';
+            window.location.href = '/#/game/TESTGAME';
           } else {
             alert('Error: ' + data.message);
           }
@@ -126,7 +126,7 @@ export function renderFixedTestPage() {
       });
       
       document.getElementById('go-to-game').addEventListener('click', function() {
-        window.location.href = '/#/host/TESTGAME';
+        window.location.href = '/#/game/TESTGAME';
       });
     </script>
   </body>

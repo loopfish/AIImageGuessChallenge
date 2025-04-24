@@ -56,6 +56,13 @@ export class MemStorage implements IStorage {
   private playerIdCounter: number;
   private guessIdCounter: number;
   private resultIdCounter: number;
+  
+  // Path for persistence file
+  private static readonly STORAGE_FILE = './game-data.json';
+  
+  // Serialization interval in milliseconds
+  private static readonly SAVE_INTERVAL = 10000; // 10 seconds
+  private saveInterval: NodeJS.Timeout | null = null;
 
   constructor() {
     this.users = new Map();
@@ -71,6 +78,147 @@ export class MemStorage implements IStorage {
     this.playerIdCounter = 1;
     this.guessIdCounter = 1;
     this.resultIdCounter = 1;
+    
+    // Try to load data from disk
+    this.loadFromDisk();
+    
+    // Setup periodic saving
+    this.saveInterval = setInterval(() => {
+      this.saveToDisk();
+    }, MemStorage.SAVE_INTERVAL);
+  }
+  
+  /**
+   * Save the current state to disk
+   */
+  private saveToDisk(): void {
+    try {
+      const fs = require('fs');
+      
+      const data = {
+        users: Array.from(this.users.entries()),
+        games: Array.from(this.games.entries()),
+        rounds: Array.from(this.rounds.entries()),
+        players: Array.from(this.players.entries()),
+        guesses: Array.from(this.guesses.entries()),
+        roundResults: Array.from(this.roundResults.entries()),
+        counters: {
+          user: this.userIdCounter,
+          game: this.gameIdCounter,
+          round: this.roundIdCounter,
+          player: this.playerIdCounter,
+          guess: this.guessIdCounter,
+          result: this.resultIdCounter
+        }
+      };
+      
+      fs.writeFileSync(MemStorage.STORAGE_FILE, JSON.stringify(data, null, 2));
+      console.log('Game data saved to disk');
+    } catch (error) {
+      console.error('Failed to save data to disk:', error);
+    }
+  }
+  
+  /**
+   * Load state from disk
+   */
+  private loadFromDisk(): void {
+    try {
+      const fs = require('fs');
+      
+      if (!fs.existsSync(MemStorage.STORAGE_FILE)) {
+        console.log('No saved data found, starting with empty database');
+        return;
+      }
+      
+      const rawData = fs.readFileSync(MemStorage.STORAGE_FILE, 'utf8');
+      const data = JSON.parse(rawData);
+      
+      // Restore maps
+      this.users = new Map(data.users);
+      this.games = new Map(data.games);
+      this.rounds = new Map(data.rounds);
+      this.players = new Map(data.players);
+      this.guesses = new Map(data.guesses);
+      this.roundResults = new Map(data.roundResults);
+      
+      // Restore counters
+      this.userIdCounter = data.counters.user;
+      this.gameIdCounter = data.counters.game;
+      this.roundIdCounter = data.counters.round;
+      this.playerIdCounter = data.counters.player;
+      this.guessIdCounter = data.counters.guess;
+      this.resultIdCounter = data.counters.result;
+      
+      // Fix any missing required fields to satisfy TypeScript
+      this.games.forEach(game => {
+        if (game.status === undefined) game.status = 'lobby';
+        if (game.currentRound === undefined) game.currentRound = 1;
+        if (game.totalRounds === undefined) game.totalRounds = 5;
+        if (game.timerSeconds === undefined) game.timerSeconds = 60;
+      });
+      
+      this.rounds.forEach(round => {
+        if (round.status === undefined) round.status = 'waiting';
+        if (round.imageUrl === undefined) round.imageUrl = null;
+      });
+      
+      this.players.forEach(player => {
+        if (player.score === undefined) player.score = 0;
+        if (player.isHost === undefined) player.isHost = false;
+        if (player.isActive === undefined) player.isActive = true;
+      });
+      
+      this.guesses.forEach(guess => {
+        if (guess.matchedWords === undefined) guess.matchedWords = null;
+        if (guess.matchCount === undefined) guess.matchCount = 0;
+      });
+      
+      this.roundResults.forEach(result => {
+        if (result.firstPlaceId === undefined) result.firstPlaceId = null;
+        if (result.secondPlaceId === undefined) result.secondPlaceId = null;
+        if (result.thirdPlaceId === undefined) result.thirdPlaceId = null;
+      });
+      
+      // Convert string dates back to Date objects
+      this.games.forEach(game => {
+        if (game.createdAt && typeof game.createdAt === 'string') {
+          game.createdAt = new Date(game.createdAt);
+        }
+      });
+      
+      this.players.forEach(player => {
+        if (player.joinedAt && typeof player.joinedAt === 'string') {
+          player.joinedAt = new Date(player.joinedAt);
+        }
+      });
+      
+      this.rounds.forEach(round => {
+        if (round.startTime && typeof round.startTime === 'string') {
+          round.startTime = new Date(round.startTime);
+        }
+        if (round.endTime && typeof round.endTime === 'string') {
+          round.endTime = new Date(round.endTime);
+        }
+      });
+      
+      this.guesses.forEach(guess => {
+        if (guess.submittedAt && typeof guess.submittedAt === 'string') {
+          guess.submittedAt = new Date(guess.submittedAt);
+        }
+      });
+      
+      this.roundResults.forEach(result => {
+        if (result.completedAt && typeof result.completedAt === 'string') {
+          result.completedAt = new Date(result.completedAt);
+        }
+      });
+      
+      console.log('Loaded game data from disk');
+      console.log(`Available games: ${Array.from(this.games.values()).map(g => g.code).join(', ')}`);
+    } catch (error) {
+      console.error('Failed to load data from disk:', error);
+    }
   }
 
   // User methods
@@ -105,9 +253,22 @@ export class MemStorage implements IStorage {
   }
   
   async getGameByCode(code: string): Promise<Game | undefined> {
-    return Array.from(this.games.values()).find(
-      (game) => game.code === code,
+    console.log(`Searching for game with code: ${code}`);
+    const allGames = Array.from(this.games.values());
+    console.log(`Available games: ${allGames.map(g => g.code).join(', ')}`);
+    
+    // Make sure we do a case-insensitive comparison for the code
+    const game = allGames.find(
+      (game) => game.code.toUpperCase() === code.toUpperCase(),
     );
+    
+    if (game) {
+      console.log(`Found game: ${game.code} (id: ${game.id})`);
+    } else {
+      console.log(`No game found with code: ${code}`);
+    }
+    
+    return game;
   }
   
   async updateGame(id: number, updateData: Partial<Game>): Promise<Game> {

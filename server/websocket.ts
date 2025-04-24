@@ -15,6 +15,9 @@ import {
   Guess,
   InsertGuess,
   RoundResult,
+  HeartbeatMessage,
+  HeartbeatResponseMessage,
+  PlayersOnlineUpdateMessage,
 } from "@shared/schema";
 import { generateImage } from "./gemini-image";
 import { 
@@ -557,6 +560,20 @@ async function handlePlayerDisconnect(
     // Update player to inactive
     await storage.updatePlayer(playerId, { isActive: false });
     
+    // Remove player from online players list
+    const onlinePlayersForGame = onlinePlayers.get(gameId);
+    if (onlinePlayersForGame) {
+      onlinePlayersForGame.delete(playerId);
+      
+      // If there are no more online players for this game, clean up
+      if (onlinePlayersForGame.size === 0) {
+        onlinePlayers.delete(gameId);
+      }
+      
+      // Broadcast updated online players status
+      updateOnlinePlayersStatus(gameId);
+    }
+    
     // Remove client from game clients map
     const gameSet = gameClients.get(gameId);
     if (gameSet) {
@@ -1051,4 +1068,65 @@ function findClientIdByPlayerId(playerId: number): string | undefined {
     }
   }
   return undefined;
+}
+
+// Handle heartbeat messages from clients
+function handleHeartbeat(clientId: string, message: HeartbeatMessage) {
+  const { playerId, gameId, timestamp } = message.payload;
+  const client = clients.get(clientId);
+  
+  if (!client) {
+    console.log(`Received heartbeat for unknown client ${clientId}`);
+    return;
+  }
+  
+  // Update client's lastActive timestamp
+  client.lastActive = Date.now();
+  
+  // Update client's player and game IDs if they're not set
+  if (!client.playerId) client.playerId = playerId;
+  if (!client.gameId) client.gameId = gameId;
+  
+  // Add player to online players for this game
+  let onlinePlayersForGame = onlinePlayers.get(gameId);
+  if (!onlinePlayersForGame) {
+    onlinePlayersForGame = new Set<number>();
+    onlinePlayers.set(gameId, onlinePlayersForGame);
+  }
+  onlinePlayersForGame.add(playerId);
+  
+  // Respond to heartbeat
+  try {
+    const response: HeartbeatResponseMessage = {
+      type: GameMessageType.HEARTBEAT_RESPONSE,
+      payload: {
+        acknowledged: true,
+        timestamp: Date.now()
+      }
+    };
+    
+    client.socket.send(JSON.stringify(response));
+    
+    // Update all clients with the current online players
+    updateOnlinePlayersStatus(gameId);
+  } catch (error) {
+    console.error(`Error sending heartbeat response to client ${clientId}:`, error);
+  }
+}
+
+// Update all clients about which players are currently online
+function updateOnlinePlayersStatus(gameId: number) {
+  const onlinePlayersForGame = onlinePlayers.get(gameId);
+  
+  if (!onlinePlayersForGame) return;
+  
+  const message: PlayersOnlineUpdateMessage = {
+    type: GameMessageType.PLAYERS_ONLINE_UPDATE,
+    payload: {
+      gameId,
+      onlinePlayers: Array.from(onlinePlayersForGame)
+    }
+  };
+  
+  sendToGame(gameId, message);
 }

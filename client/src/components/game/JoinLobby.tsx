@@ -3,22 +3,31 @@ import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/card";
+import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { useGameContext } from "@/hooks/use-game";
 import { GameMessageType } from "@shared/schema";
-import { PlayerConnectionInfo } from "./PlayerConnectionInfo";
+import { GameLayout } from "@/components/layout/GameLayout";
 
+/**
+ * JoinLobby component that allows users to join an existing game
+ * Now uses GameLayout instead of directly including the connection info
+ */
 export default function JoinLobby() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
-  const { socket } = useGameContext();
+  const { socket, gameState, setGameState, isConnected } = useGameContext();
   
   const [username, setUsername] = useState("");
   const [gameCode, setGameCode] = useState("");
   const [isJoining, setIsJoining] = useState(false);
-
-  const { setGameState } = useGameContext();
+  
+  // Debug log for component
+  console.log("JoinLobby component rendering with state:", {
+    gameState,
+    isConnected,
+    isJoining
+  });
   
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -87,27 +96,11 @@ export default function JoinLobby() {
     }
   };
 
-  const { gameState, isConnected } = useGameContext();
-  
-  // Show connection info if either:
-  // 1. Player has already joined a game with a player ID
-  // 2. Player is in connecting state during join process
-  // Always include player connection info in any state
-  console.log("JoinLobby component rendering with state:", {
-    gameState,
-    isConnected,
-    isJoining
-  });
-  
-  // Show connected state if player is connected
-  if ((gameState?.currentPlayerId || gameState?.isConnecting) && isConnected) {
-    return (
-      <div className="max-w-md mx-auto space-y-4">
-        {/* Player Connection Info - Always render with forced visibility */}
-        <div className="player-connection-container" style={{display: 'block', visibility: 'visible'}}>
-          <PlayerConnectionInfo />
-        </div>
-        
+  // Render content based on connection state
+  const renderContent = () => {
+    // Show connected/joining state if player is connected
+    if ((gameState?.currentPlayerId || gameState?.isConnecting) && isConnected) {
+      return (
         <Card>
           <CardHeader>
             <h2 className="text-xl font-heading font-semibold text-center text-green-800">
@@ -128,19 +121,11 @@ export default function JoinLobby() {
             </Button>
           </CardContent>
         </Card>
-      </div>
-    );
-  }
-  
-  return (
-    <div className="max-w-md mx-auto space-y-4">
-      {/* Always show connection info if available */}
-      {isConnected && (
-        <div className="player-connection-container" style={{display: 'block', visibility: 'visible'}}>
-          <PlayerConnectionInfo />
-        </div>
-      )}
-      
+      );
+    }
+    
+    // Otherwise show the join form
+    return (
       <Card>
         <CardHeader>
           <h2 className="text-2xl font-heading font-semibold text-center">Join a Game</h2>
@@ -180,6 +165,15 @@ export default function JoinLobby() {
           </form>
         </CardContent>
       </Card>
-    </div>
+    );
+  };
+  
+  // Wrap content in GameLayout instead of manually including PlayerConnectionInfo
+  return (
+    <GameLayout showConnectionInfo={true}>
+      <div className="max-w-md mx-auto">
+        {renderContent()}
+      </div>
+    </GameLayout>
   );
 }

@@ -25,9 +25,23 @@ export default function GamePlay() {
   // Determine if current player is the host
   const isHost = currentPlayer?.isHost || false;
   
+  // Check if player has already submitted a guess for the current round
+  const currentRoundGuesses = gameState?.playerGuesses?.filter(
+    g => g.playerId === currentPlayer?.id && g.roundId === currentRound?.id
+  ) || [];
+  const hasAlreadyGuessed = currentRoundGuesses.length > 0;
+  
+  // Update hasSubmitted state if we detect server-side submissions
+  useEffect(() => {
+    if (hasAlreadyGuessed && !hasSubmitted) {
+      setHasSubmitted(true);
+    }
+  }, [hasAlreadyGuessed]);
+  
   // Check if player is allowed to guess
   // Hosts cannot submit guesses in their own games to prevent cheating
-  const canSubmitGuess = !isHost || gameState?.game?.status === "round_end";
+  // Players can't guess if they've already submitted a guess
+  const canSubmitGuess = (!isHost && !hasSubmitted) || gameState?.game?.status === "round_end";
   
   // Keep track of which words the current player has matched
   const playerGuesses = gameState?.playerGuesses?.filter(g => g.playerId === currentPlayer?.id) || [];

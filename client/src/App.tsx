@@ -12,6 +12,7 @@ import Game from "@/pages/game";
 import HowToPlay from "@/pages/how-to-play";
 import About from "@/pages/about";
 import WebSocketTest from "@/pages/websocket-test";
+import ImageTest from "@/pages/image-test";
 import { useEffect } from "react";
 
 function Router() {

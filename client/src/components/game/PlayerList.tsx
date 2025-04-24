@@ -9,6 +9,7 @@ export default function PlayerList({ showScores = false, className = "" }: Playe
   const { gameState } = useGameContext();
   
   const players = gameState?.players || [];
+  const onlinePlayers = gameState?.onlinePlayers || [];
   const hostId = gameState?.game?.hostId;
   
   return (
@@ -65,10 +66,22 @@ export default function PlayerList({ showScores = false, className = "" }: Playe
             <span className={`ml-2 font-medium ${showScores ? 'flex-grow truncate' : ''}`}>
               {player.username}
             </span>
-            <span className="ml-auto text-sm text-gray-600">
-              {player.id === hostId ? "Host" : ""}
-              {showScores && `${player.score} ${player.score === 1 ? 'pt' : 'pts'}`}
-            </span>
+            <div className="ml-auto flex items-center">
+              {/* Online Status Indicator */}
+              <span 
+                className={`inline-block w-2.5 h-2.5 rounded-full mr-2 ${
+                  onlinePlayers.includes(player.id) 
+                    ? 'bg-green-500 animate-pulse' 
+                    : 'bg-gray-300'
+                }`} 
+                title={onlinePlayers.includes(player.id) ? 'Online' : 'Offline'}
+              />
+              
+              <span className="text-sm text-gray-600">
+                {player.id === hostId ? "Host" : ""}
+                {showScores && `${player.score} ${player.score === 1 ? 'pt' : 'pts'}`}
+              </span>
+            </div>
           </div>
         ))}
       </div>

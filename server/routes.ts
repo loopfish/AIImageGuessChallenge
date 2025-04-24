@@ -5,6 +5,7 @@ import { WebSocketServer } from "ws";
 import { setupWebsocketHandlers } from "./websocket";
 import { generateImage } from "./gemini";
 import { z } from "zod";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
@@ -127,6 +128,254 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching game state:", error);
       res.status(500).json({ message: "Failed to fetch game state" });
+    }
+  });
+
+  // Test page for Gemini image generation
+  app.get("/test-gemini-image", (req, res) => {
+    res.send(`
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Gemini Image Generation Test</title>
+        <style>
+          body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+          }
+          .container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+          }
+          .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+          }
+          input, button, select {
+            padding: 10px;
+            font-size: 16px;
+          }
+          button {
+            cursor: pointer;
+            background: #5D3FD3;
+            color: white;
+            border: none;
+            border-radius: 4px;
+          }
+          .result {
+            margin-top: 20px;
+            display: none;
+          }
+          .image-container {
+            margin-top: 20px;
+            border: 1px solid #ddd;
+            padding: 10px;
+          }
+          img {
+            max-width: 100%;
+          }
+          .logs {
+            margin-top: 20px;
+            background: #f5f5f5;
+            padding: 10px;
+            border-radius: 4px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: monospace;
+          }
+          pre {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+          }
+        </style>
+      </head>
+      <body>
+        <h1>Gemini Image Generation Test</h1>
+        <div class="container">
+          <div class="form-group">
+            <label for="model">Gemini Model:</label>
+            <select id="model">
+              <option value="gemini-1.5-flash">gemini-1.5-flash</option>
+              <option value="gemini-1.5-pro">gemini-1.5-pro</option>
+              <option value="gemini-1.0-pro">gemini-1.0-pro</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="prompt">Image Prompt:</label>
+            <input type="text" id="prompt" placeholder="A cat wearing sunglasses on a beach" value="A sheep playing tennis on the moon">
+          </div>
+          <button id="generate">Generate Image</button>
+          <div class="logs" id="logs"></div>
+          <div class="result" id="result">
+            <h2>Generated Image:</h2>
+            <div class="image-container">
+              <img id="generated-image" src="" alt="Generated image will appear here">
+            </div>
+            <div id="raw-response" class="mt-4">
+              <h3>Raw Response:</h3>
+              <pre id="response-text"></pre>
+            </div>
+          </div>
+        </div>
+
+        <script>
+          const logElement = document.getElementById('logs');
+          const resultElement = document.getElementById('result');
+          const imageElement = document.getElementById('generated-image');
+          const responseTextElement = document.getElementById('response-text');
+          
+          function log(message) {
+            const logLine = document.createElement('div');
+            logLine.textContent = message;
+            logElement.appendChild(logLine);
+            logElement.scrollTop = logElement.scrollHeight;
+          }
+
+          document.getElementById('generate').addEventListener('click', async () => {
+            const prompt = document.getElementById('prompt').value;
+            const model = document.getElementById('model').value;
+            
+            if (!prompt) {
+              log('Please enter a prompt');
+              return;
+            }
+            
+            log(\`Generating image for prompt: "\${prompt}" using model \${model}...\`);
+            resultElement.style.display = 'none';
+            
+            try {
+              const response = await fetch('/api/test-gemini-image', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ prompt, model })
+              });
+              
+              if (!response.ok) {
+                throw new Error(\`Server error: \${response.status}\`);
+              }
+              
+              const data = await response.json();
+              log('Response received from server');
+              
+              if (data.error) {
+                log(\`Error: \${data.error}\`);
+                return;
+              }
+              
+              // Show raw response
+              if (data.rawResponse) {
+                responseTextElement.textContent = data.rawResponse;
+                log(\`Raw response length: \${data.rawResponse.length} characters\`);
+              }
+              
+              if (data.imageUrl) {
+                log(\`Image URL: \${data.imageUrl}\`);
+                imageElement.src = data.imageUrl;
+                resultElement.style.display = 'block';
+              } else {
+                log('No image URL found in response');
+                
+                // Try to find URLs in the text ourselves
+                const urlMatch = data.rawResponse?.match(/https?:\\/\\/\\S+\\.(jpg|jpeg|png|gif|webp)/i);
+                if (urlMatch) {
+                  const imageUrl = urlMatch[0];
+                  log(\`Found image URL in response: \${imageUrl}\`);
+                  imageElement.src = imageUrl;
+                  resultElement.style.display = 'block';
+                }
+              }
+              
+              resultElement.style.display = 'block';
+            } catch (error) {
+              log(\`Error: \${error.message}\`);
+            }
+          });
+        </script>
+      </body>
+      </html>
+    `);
+  });
+  
+  // API endpoint to test Gemini image generation
+  app.post("/api/test-gemini-image", async (req, res) => {
+    try {
+      const { prompt, model = "gemini-1.5-flash" } = req.body;
+      
+      if (!prompt) {
+        return res.status(400).json({ error: "Missing prompt parameter" });
+      }
+      
+      const apiKey = process.env.GEMINI_API_KEY;
+      if (!apiKey) {
+        return res.status(500).json({ error: "Missing GEMINI_API_KEY environment variable" });
+      }
+      
+      console.log(`Testing image generation with model: ${model} and prompt: "${prompt}"`);
+      
+      const genAI = new GoogleGenerativeAI(apiKey);
+      const genModel = genAI.getGenerativeModel({ model });
+      
+      try {
+        // Ask Gemini to return an image or URL for the given prompt
+        const result = await genModel.generateContent({
+          contents: [
+            {
+              role: "user",
+              parts: [
+                { text: `Generate an image for: "${prompt}". 
+                Please provide a detailed visual representation of the prompt. 
+                If possible, include a URL to a similar image or describe how to create such an image 
+                in detail so I can visualize it.` }
+              ]
+            }
+          ],
+          generationConfig: {
+            temperature: 0.8,
+            topK: 32,
+            topP: 1,
+            maxOutputTokens: 4096,
+          }
+        });
+        
+        const response = await result.response;
+        const responseText = response.text();
+        
+        console.log("Gemini test response:", responseText.substring(0, 200) + "...");
+        
+        // Return the raw response for debugging, plus check for any image URLs
+        const urlMatch = responseText.match(/https?:\/\/\S+\.(jpg|jpeg|png|gif|webp)/i);
+        let imageUrl = null;
+        
+        if (urlMatch) {
+          imageUrl = urlMatch[0];
+          console.log("Found image URL in response:", imageUrl);
+        }
+        
+        // Return both the raw response and any extracted URL
+        return res.json({ 
+          rawResponse: responseText,
+          imageUrl: imageUrl
+        });
+        
+      } catch (modelError) {
+        console.error("Error using Gemini model:", modelError);
+        return res.status(500).json({ 
+          error: `Error using Gemini model: ${modelError.message}`,
+          details: modelError
+        });
+      }
+    } catch (error) {
+      console.error("Error in test-gemini-image route:", error);
+      res.status(500).json({ error: "Failed to test image generation" });
     }
   });
 

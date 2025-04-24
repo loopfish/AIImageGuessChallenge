@@ -92,6 +92,44 @@ export class DatabaseStorage implements IStorage {
     
     return updatedGame;
   }
+  
+  async resetAllActiveGames(): Promise<void> {
+    console.log('Resetting all active games in the database...');
+    
+    try {
+      // First, mark all active games as ended
+      await db
+        .update(games)
+        .set({ status: 'ended' })
+        .where(eq(games.status, 'playing'))
+        .execute();
+        
+      // Also mark active lobby games as ended
+      await db
+        .update(games)
+        .set({ status: 'ended' })
+        .where(eq(games.status, 'lobby'))
+        .execute();
+        
+      // Mark game rounds as complete
+      await db
+        .update(rounds)
+        .set({ status: 'complete' })
+        .where(eq(rounds.status, 'active'))
+        .execute();
+        
+      // Mark all players as inactive
+      await db
+        .update(players)
+        .set({ isActive: false })
+        .execute();
+        
+      console.log('All active games have been reset in the database');
+    } catch (error) {
+      console.error('Error resetting all active games:', error);
+      throw error;
+    }
+  }
 
   // Round methods
   async createRound(round: InsertRound): Promise<Round> {

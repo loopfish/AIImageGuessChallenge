@@ -43,11 +43,23 @@ app.use((req, res, next) => {
   // Setup server shutdown handler
   const gracefulShutdown = () => {
     console.log('Server is shutting down gracefully...');
+    
+    // Broadcast restart message to all connected clients if broadcastServerRestart is available
+    if (typeof (global as any).broadcastServerRestart === 'function') {
+      console.log('Broadcasting server restart message to clients...');
+      (global as any).broadcastServerRestart();
+    }
+    
     // Mark all games as inactive
     storage.resetAllActiveGames()
       .then(() => {
         console.log('All games have been reset');
-        process.exit(0);
+        
+        // Short delay to allow messages to be sent to clients
+        setTimeout(() => {
+          console.log('Exiting server process...');
+          process.exit(0);
+        }, 1000);
       })
       .catch(err => {
         console.error('Error resetting games:', err);

@@ -53,6 +53,37 @@ const HEARTBEAT_INTERVAL = 10000; // 10 seconds
 
 // Use the reconnection types from the shared schema
 
+// Track server restart state
+let serverRestartInProgress = false;
+
+/**
+ * Broadcast server restart message to all connected clients
+ */
+function broadcastServerRestart() {
+  console.log("Broadcasting server restart message to all connected clients...");
+  serverRestartInProgress = true;
+  
+  // Broadcast to all clients
+  const restartMessage: WebSocketMessage = {
+    type: "server_restart",
+    payload: { message: "Server is restarting. You will be redirected to the home page." }
+  };
+  
+  clients.forEach((client, clientId) => {
+    if (client.socket.readyState === WebSocket.OPEN) {
+      try {
+        client.socket.send(JSON.stringify(restartMessage));
+        console.log(`Sent restart message to client ${clientId}`);
+      } catch (error) {
+        console.error(`Failed to send restart message to client ${clientId}:`, error);
+      }
+    }
+  });
+}
+
+// Export the broadcast function to global scope so it can be called from outside this module
+(global as any).broadcastServerRestart = broadcastServerRestart;
+
 export function setupWebsocketHandlers(wss: WebSocketServer, storage: IStorage) {
   console.log('WebSocket handler setup initialized');
   

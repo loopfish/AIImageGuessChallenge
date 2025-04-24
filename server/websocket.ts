@@ -764,10 +764,11 @@ async function sendGameState(gameId: number, storage: IStorage) {
     // Get players
     const players = await storage.getPlayersByGameId(gameId);
     
-    // Build game state
+    // Build game state with online players information
     const gameState: GameState = {
       game,
-      players
+      players,
+      onlinePlayers: Array.from(onlinePlayers.get(gameId) || [])
     };
     
     // Add current round data if game is active
@@ -806,10 +807,11 @@ async function sendGameStateToClient(clientId: string, gameId: number, storage: 
     // Get players
     const players = await storage.getPlayersByGameId(gameId);
     
-    // Build game state
+    // Build game state with online players information
     const gameState: GameState = {
       game,
-      players
+      players,
+      onlinePlayers: Array.from(onlinePlayers.get(gameId) || [])
     };
     
     // Add current round data if game is active

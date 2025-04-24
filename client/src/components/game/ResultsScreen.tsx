@@ -81,51 +81,70 @@ export default function ResultsScreen() {
   // Assume the round start time is the time when the round was started (or now if not available)
   const roundStartTime = currentRound.startTime ? new Date(currentRound.startTime) : new Date();
   
-  if (firstPlace && firstPlaceGuess) {
-    const submittedAt = firstPlaceGuess.submittedAt ? new Date(firstPlaceGuess.submittedAt) : undefined;
-    // Calculate speed if timestamp exists
-    const submissionSpeed = submittedAt ? differenceInSeconds(submittedAt, roundStartTime) : undefined;
+  // Add submission speed to guess objects for display in podium
+  // This is safe to do as we're not modifying the original objects in the gameState
+  const processedGuesses = {
+    firstPlaceGuess: firstPlaceGuess ? {
+      ...firstPlaceGuess,
+      submissionSpeed: firstPlaceGuess.submittedAt ? 
+        differenceInSeconds(new Date(firstPlaceGuess.submittedAt), roundStartTime) : undefined
+    } : undefined,
+    
+    secondPlaceGuess: secondPlaceGuess ? {
+      ...secondPlaceGuess,
+      submissionSpeed: secondPlaceGuess.submittedAt ? 
+        differenceInSeconds(new Date(secondPlaceGuess.submittedAt), roundStartTime) : undefined
+    } : undefined,
+    
+    thirdPlaceGuess: thirdPlaceGuess ? {
+      ...thirdPlaceGuess,
+      submissionSpeed: thirdPlaceGuess.submittedAt ? 
+        differenceInSeconds(new Date(thirdPlaceGuess.submittedAt), roundStartTime) : undefined
+    } : undefined
+  };
+  
+  if (firstPlace && processedGuesses.firstPlaceGuess) {
+    const submittedAt = processedGuesses.firstPlaceGuess.submittedAt ? 
+      new Date(processedGuesses.firstPlaceGuess.submittedAt) : undefined;
     
     playerResults.push({
       id: firstPlace.id,
       username: firstPlace.username,
-      matchedWords: firstPlaceGuess.matchedWords || [],
+      matchedWords: processedGuesses.firstPlaceGuess.matchedWords || [],
       place: 1,
       points: 3,
       submittedAt,
-      submissionSpeed
+      submissionSpeed: processedGuesses.firstPlaceGuess.submissionSpeed
     });
   }
   
-  if (secondPlace && secondPlaceGuess) {
-    const submittedAt = secondPlaceGuess.submittedAt ? new Date(secondPlaceGuess.submittedAt) : undefined;
-    // Calculate speed if timestamp exists
-    const submissionSpeed = submittedAt ? differenceInSeconds(submittedAt, roundStartTime) : undefined;
+  if (secondPlace && processedGuesses.secondPlaceGuess) {
+    const submittedAt = processedGuesses.secondPlaceGuess.submittedAt ? 
+      new Date(processedGuesses.secondPlaceGuess.submittedAt) : undefined;
     
     playerResults.push({
       id: secondPlace.id,
       username: secondPlace.username,
-      matchedWords: secondPlaceGuess.matchedWords || [],
+      matchedWords: processedGuesses.secondPlaceGuess.matchedWords || [],
       place: 2,
       points: 2,
       submittedAt,
-      submissionSpeed
+      submissionSpeed: processedGuesses.secondPlaceGuess.submissionSpeed
     });
   }
   
-  if (thirdPlace && thirdPlaceGuess) {
-    const submittedAt = thirdPlaceGuess.submittedAt ? new Date(thirdPlaceGuess.submittedAt) : undefined;
-    // Calculate speed if timestamp exists
-    const submissionSpeed = submittedAt ? differenceInSeconds(submittedAt, roundStartTime) : undefined;
+  if (thirdPlace && processedGuesses.thirdPlaceGuess) {
+    const submittedAt = processedGuesses.thirdPlaceGuess.submittedAt ? 
+      new Date(processedGuesses.thirdPlaceGuess.submittedAt) : undefined;
     
     playerResults.push({
       id: thirdPlace.id,
       username: thirdPlace.username,
-      matchedWords: thirdPlaceGuess.matchedWords || [],
+      matchedWords: processedGuesses.thirdPlaceGuess.matchedWords || [],
       place: 3,
       points: 1,
       submittedAt,
-      submissionSpeed
+      submissionSpeed: processedGuesses.thirdPlaceGuess.submissionSpeed
     });
   }
   
@@ -242,8 +261,11 @@ export default function ResultsScreen() {
                   </div>
                   <span className="text-white font-medium text-sm truncate w-full">{secondPlace.username}</span>
                   <span className="text-white text-xs">+2 pts</span>
-                  {secondPlaceGuess?.submittedAt && (
-                    <span className="text-white/80 text-[0.6rem] mt-1">{format(new Date(secondPlaceGuess.submittedAt), 'h:mm:ss a')}</span>
+                  {processedGuesses.secondPlaceGuess?.submissionSpeed !== undefined && (
+                    <span className="text-white/80 text-[0.6rem] mt-1 flex items-center justify-center">
+                      <Zap className="h-3 w-3 mr-1" />
+                      {processedGuesses.secondPlaceGuess.submissionSpeed} {processedGuesses.secondPlaceGuess.submissionSpeed === 1 ? 'sec' : 'secs'}
+                    </span>
                   )}
                 </div>
               </div>
@@ -263,8 +285,11 @@ export default function ResultsScreen() {
                   </div>
                   <span className="text-white font-medium truncate w-full">{firstPlace.username}</span>
                   <span className="text-white text-sm">+3 pts</span>
-                  {firstPlaceGuess?.submittedAt && (
-                    <span className="text-white/80 text-[0.65rem] mt-1">{format(new Date(firstPlaceGuess.submittedAt), 'h:mm:ss a')}</span>
+                  {processedGuesses.firstPlaceGuess?.submissionSpeed !== undefined && (
+                    <span className="text-white/80 text-[0.65rem] mt-1 flex items-center justify-center">
+                      <Zap className="h-3 w-3 mr-1" />
+                      {processedGuesses.firstPlaceGuess.submissionSpeed} {processedGuesses.firstPlaceGuess.submissionSpeed === 1 ? 'sec' : 'secs'}
+                    </span>
                   )}
                 </div>
               </div>
@@ -284,8 +309,11 @@ export default function ResultsScreen() {
                   </div>
                   <span className="text-white font-medium text-xs truncate w-full">{thirdPlace.username}</span>
                   <span className="text-white text-xs">+1 pt</span>
-                  {thirdPlaceGuess?.submittedAt && (
-                    <span className="text-white/80 text-[0.6rem] mt-1">{format(new Date(thirdPlaceGuess.submittedAt), 'h:mm:ss a')}</span>
+                  {processedGuesses.thirdPlaceGuess?.submissionSpeed !== undefined && (
+                    <span className="text-white/80 text-[0.6rem] mt-1 flex items-center justify-center">
+                      <Zap className="h-3 w-3 mr-1" />
+                      {processedGuesses.thirdPlaceGuess.submissionSpeed} {processedGuesses.thirdPlaceGuess.submissionSpeed === 1 ? 'sec' : 'secs'}
+                    </span>
                   )}
                 </div>
               </div>

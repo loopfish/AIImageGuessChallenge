@@ -23,6 +23,7 @@ function Router() {
       <Route path="/how-to-play" component={HowToPlay} />
       <Route path="/about" component={About} />
       <Route path="/websocket-test" component={WebSocketTest} />
+      <Route path="/image-test" component={ImageTest} />
       <Route component={NotFound} />
     </Switch>
   );

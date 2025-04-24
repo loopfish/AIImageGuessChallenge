@@ -6,6 +6,8 @@ import { setupWebsocketHandlers } from "./websocket";
 import { generateImage } from "./gemini";
 import { z } from "zod";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { testGeminiImageGeneration } from "./test-gemini-image";
+import { renderTestPage } from "./test-page";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
@@ -377,6 +379,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: "Failed to test image generation" });
     }
   });
+  
+  // New Gemini image generation test page
+  app.get("/new-gemini-test", renderTestPage);
+  
+  // New API endpoint for Gemini image generation
+  app.post("/api/new-gemini-image", testGeminiImageGeneration);
 
   return httpServer;
 }

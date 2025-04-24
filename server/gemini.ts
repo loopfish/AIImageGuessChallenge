@@ -122,12 +122,30 @@ export async function generateImage(prompt: string): Promise<string> {
 
 // Create a seed value from keywords for LoremPicsum
 function createSeedFromKeywords(keywords: string): string {
-  // Remove special characters and spaces, take first 20 chars
-  const seed = keywords.replace(/[^a-zA-Z0-9]/g, '').toLowerCase().substring(0, 20);
+  // Remove special characters and spaces
+  let seed = keywords.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+  
+  // Use a hash function to create a more deterministic but varied seed
+  // This ensures the same prompt always gives the same image
+  // but different prompts likely give different images
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) {
+    const char = seed.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32bit integer
+  }
+  
+  // Convert hash to positive number and to string
+  const positiveHash = Math.abs(hash).toString();
+  
+  // Take specific length for consistency
+  seed = positiveHash.substring(0, 10);
+  
   // If seed is too short, pad it
   if (seed.length < 5) {
-    return seed + "image" + Date.now() % 1000;
+    return seed + "image5000";
   }
+  
   return seed;
 }
 

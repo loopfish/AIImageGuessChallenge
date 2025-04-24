@@ -520,6 +520,20 @@ async function handleSubmitGuess(message: SubmitGuessMessage, storage: IStorage)
       throw new Error("Player not in this game");
     }
     
+    // Check if player has already submitted a guess for this round
+    const existingGuesses = await storage.getGuessesByRoundAndPlayer(roundId, player.id);
+    
+    if (existingGuesses && existingGuesses.length > 0) {
+      console.log(`Player ${player.username} already submitted a guess for round ${roundId}`);
+      
+      // If player has a client ID, send them a specific error
+      if (socketClientId) {
+        sendErrorToClient(socketClientId, "You've already submitted a guess for this round");
+      }
+      
+      return; // Exit early, not creating a new guess
+    }
+    
     // Process the guess
     const prompt = round.prompt.toLowerCase();
     const guess = guessText.toLowerCase();

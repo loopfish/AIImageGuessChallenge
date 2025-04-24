@@ -120,6 +120,6 @@ function generatePlaceholderImage(prompt: string): string {
   const encodedPrompt = encodeURIComponent(prompt);
   const imageUrl = `https://placehold.co/${width}x${height}/5D3FD3/FFFFFF?text=${encodedPrompt}`;
   
-  console.log(`Generated placeholder image for prompt: "${prompt}"`);
+  // Quietly generate a placeholder image without the console message
   return imageUrl;
 }

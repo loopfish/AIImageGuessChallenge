@@ -409,6 +409,8 @@ async function handleSubmitGuess(message: SubmitGuessMessage, storage: IStorage)
   try {
     const { gameId, playerId, roundId, guessText } = message.payload;
     
+    console.log(`Processing guess from player ${playerId} in game ${gameId}, round ${roundId}: "${guessText}"`);
+    
     // Get the round
     const round = await storage.getRound(roundId);
     if (!round || round.status !== "active") {
@@ -418,7 +420,40 @@ async function handleSubmitGuess(message: SubmitGuessMessage, storage: IStorage)
     // Get the player
     const player = await storage.getPlayer(playerId);
     if (!player) {
+      console.error(`Player ${playerId} not found when submitting guess`);
+      
+      // Try to find the player using the client mapping
+      const clientEntries = Array.from(clients.entries());
+      const clientId = clientEntries.find(([id, client]) => 
+        client && client.gameId === gameId && client.socket.readyState === WebSocket.OPEN
+      )?.[0];
+      
+      if (clientId) {
+        const client = clients.get(clientId);
+        if (client && client.playerId) {
+          const correctPlayer = await storage.getPlayer(client.playerId);
+          if (correctPlayer) {
+            console.log(`Found correct player ${correctPlayer.username} (${correctPlayer.id}) for guess submission`);
+            return handleSubmitGuess({
+              type: GameMessageType.SUBMIT_GUESS,
+              payload: {
+                gameId,
+                playerId: correctPlayer.id,
+                roundId,
+                guessText
+              }
+            }, storage);
+          }
+        }
+      }
+      
       throw new Error("Player not found");
+    }
+    
+    // Verify this player is in the correct game
+    if (player.gameId !== gameId) {
+      console.error(`Player ${playerId} (${player.username}) belongs to game ${player.gameId}, not ${gameId}`);
+      throw new Error("Player not in this game");
     }
     
     // Process the guess

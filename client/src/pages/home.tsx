@@ -87,7 +87,7 @@ export default function Home() {
     // Save name for future sessions
     try {
       // Generate a session ID if needed
-      const sessionId = getSessionId();
+      const sessionId = generateSessionId();
       
       // Save in both the session-specific and the legacy key location
       localStorage.setItem('playerName', username);

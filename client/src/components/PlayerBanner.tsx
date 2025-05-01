@@ -9,70 +9,40 @@ export default function PlayerBanner() {
   const [username, setUsername] = useState("");
   const [, navigate] = useLocation();
   
-  // Generate a unique key for this browser tab to prevent conflicts between tabs
-  const [sessionKey] = useState(() => {
-    try {
-      const existingKey = localStorage.getItem('sessionId');
-      if (existingKey) {
-        console.log("Using existing sessionId:", existingKey);
-        return existingKey;
-      }
-      
-      const newKey = 'session_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
-      localStorage.setItem('sessionId', newKey);
-      console.log("Created new sessionId:", newKey);
-      return newKey;
-    } catch (error) {
-      console.error("Error with sessionId:", error);
-      return 'fallback_session_' + Date.now();
-    }
-  });
-  
-  // Use sessionKey as a prefix for localStorage keys to avoid conflicts between tabs
-  const playerNameKey = `playerName_${sessionKey}`;
-  
-  // If in a game, use the current player's name
+  // On component mount, load the username from localStorage or game state
   useEffect(() => {
-    if (gameState?.currentPlayerId) {
-      const currentPlayer = gameState.players?.find(p => p.id === gameState.currentPlayerId);
-      if (currentPlayer?.username) {
-        setUsername(currentPlayer.username);
-        try {
-          localStorage.setItem(playerNameKey, currentPlayer.username);
-        } catch (error) {
-          // Silent fail on localStorage errors
+    function loadPlayerName() {
+      // First try to get the player name from game state
+      if (gameState?.currentPlayerId && gameState?.players) {
+        const currentPlayer = gameState.players.find(p => p.id === gameState.currentPlayerId);
+        if (currentPlayer?.username) {
+          console.log("Using player name from game state:", currentPlayer.username);
+          setUsername(currentPlayer.username);
+          return;
         }
       }
-    }
-  }, [gameState?.currentPlayerId, gameState?.players, playerNameKey]);
-  
-  // Load username from localStorage on component mount (if not in a game)
-  useEffect(() => {
-    try {
-      const savedNameSession = localStorage.getItem(playerNameKey);
-      const savedNameLegacy = localStorage.getItem('playerName');
-      const savedName = savedNameSession || savedNameLegacy;
       
-      console.log("Loading playerName from storage:", { 
-        playerNameKey, 
-        savedNameSession, 
-        savedNameLegacy, 
-        savedName 
-      });
-      
-      if (savedName) {
-        setUsername(savedName);
+      // If no player info in game state, try localStorage
+      try {
+        // Try to get from localStorage using normal key first
+        const savedName = localStorage.getItem('playerName');
+        if (savedName) {
+          console.log("Using player name from localStorage:", savedName);
+          setUsername(savedName);
+          return;
+        }
+      } catch (error) {
+        console.error("Error loading username from localStorage:", error);
       }
-    } catch (error) {
-      console.error("Error loading username:", error);
     }
-  }, [playerNameKey]);
+    
+    loadPlayerName();
+  }, [gameState]);
   
   // Handle logout - reset game state and navigate to home
   const handleLogout = () => {
     try {
-      // Clear usernames from all possible storages
-      localStorage.removeItem(playerNameKey);
+      // Clear usernames from localStorage
       localStorage.removeItem('playerName');
       
       // Also clear hasEnteredName flag that Home component uses
@@ -80,8 +50,10 @@ export default function PlayerBanner() {
       
       // Set a special flag to force the name prompt to appear
       localStorage.setItem('showNamePrompt', 'true');
+      
+      console.log("Logged out, cleared localStorage");
     } catch (error) {
-      // Silent fail on localStorage errors
+      console.error("Error during logout:", error);
     }
     
     // Reset username in current component

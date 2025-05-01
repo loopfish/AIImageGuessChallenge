@@ -122,6 +122,11 @@ export default function Home() {
     
     // Update the state to advance to the next screen
     setHasEnteredName(true);
+    
+    // Dispatch a custom event to notify other components (like Header) that the name has changed
+    window.dispatchEvent(new CustomEvent('playerNameChanged', { 
+      detail: { username } 
+    }));
   };
 
   // Handle creating a new private game room

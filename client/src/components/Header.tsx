@@ -11,25 +11,46 @@ export default function Header() {
   
   // Load username whenever location or gameState changes
   useEffect(() => {
-    // First try to get from localStorage
-    try {
-      const savedName = localStorage.getItem('playerName');
-      if (savedName) {
-        console.log("Header - Found name in localStorage:", savedName);
-        setUsername(savedName);
+    function loadPlayerName() {
+      // First try to get from localStorage
+      try {
+        const savedName = localStorage.getItem('playerName');
+        if (savedName) {
+          console.log("Header - Found name in localStorage:", savedName);
+          setUsername(savedName);
+        }
+      } catch (error) {
+        console.error("Error reading from localStorage:", error);
       }
-    } catch (error) {
-      console.error("Error reading from localStorage:", error);
+      
+      // Also check game state for player name (takes precedence)
+      if (gameState?.currentPlayerId && gameState?.players) {
+        const currentPlayer = gameState.players.find(p => p.id === gameState.currentPlayerId);
+        if (currentPlayer?.username) {
+          console.log("Header - Using player name from game state:", currentPlayer.username);
+          setUsername(currentPlayer.username);
+        }
+      }
     }
     
-    // Also check game state for player name (takes precedence)
-    if (gameState?.currentPlayerId && gameState?.players) {
-      const currentPlayer = gameState.players.find(p => p.id === gameState.currentPlayerId);
-      if (currentPlayer?.username) {
-        console.log("Header - Using player name from game state:", currentPlayer.username);
-        setUsername(currentPlayer.username);
+    // Load player name immediately
+    loadPlayerName();
+    
+    // Listen for player name change events
+    const handlePlayerNameChanged = (event: any) => {
+      console.log("Header - Received playerNameChanged event:", event.detail);
+      if (event.detail?.username) {
+        setUsername(event.detail.username);
       }
-    }
+    };
+    
+    // Add event listener
+    window.addEventListener('playerNameChanged', handlePlayerNameChanged);
+    
+    // Clean up event listener on unmount
+    return () => {
+      window.removeEventListener('playerNameChanged', handlePlayerNameChanged);
+    };
   }, [location, gameState]);
   
   // Handle logout

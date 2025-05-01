@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, UserRound, PlusCircle, LogIn } from "lucide-react";
+import { Loader2, UserRound, PlusCircle, LogIn, RefreshCw, Lock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { useGameContext } from "@/hooks/use-game";
@@ -10,6 +10,8 @@ import { GameMessageType } from "@shared/schema";
 import JoinLobby from "@/components/game/JoinLobby";
 import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { useQuery } from '@tanstack/react-query';
+import { GameLobbyList } from "@/components/game/GameLobbyList";
 
 export default function Home() {
   const [, navigate] = useLocation();
@@ -30,6 +32,26 @@ export default function Home() {
   const [gameCode, setGameCode] = useState("");
   const [gamePassword, setGamePassword] = useState("");
   const [activeTab, setActiveTab] = useState("createRoom");
+  
+  // Define the GameLobby type
+  interface GameLobby {
+    id: number;
+    code: string;
+    status: string;
+    roomName: string | null;
+    hasPassword: boolean;
+    currentRound: number;
+    totalRounds: number;
+    timerSeconds: number;
+    createdAt: string;
+  }
+  
+  // Query for game lobbies
+  const { data: lobbies, isLoading: lobbiesLoading, error: lobbiesError, refetch: refetchLobbies } = useQuery<GameLobby[]>({
+    queryKey: ['/api/games'],
+    refetchInterval: 10000, // Refresh every 10 seconds
+    enabled: activeTab === 'joinRoom', // Only fetch when on join tab
+  });
 
   // Check if the user already has a name saved
   useEffect(() => {
@@ -193,6 +215,22 @@ export default function Home() {
       let currentSocket = socket;
       if (!currentSocket) {
         currentSocket = await connectWebSocket();
+      }
+      
+      // Check if this game needs a password by looking in the game list
+      const selectedGame = lobbies?.find(game => game.code === gameCode);
+      
+      // If the game has a password and we don't have one provided, notify the user
+      if (selectedGame?.hasPassword && !gamePassword.trim()) {
+        toast({
+          title: "Password Required",
+          description: "This room is password protected. Please enter the password.",
+          variant: "destructive"
+        });
+        // Focus on the password field
+        document.getElementById('game-password')?.focus();
+        setIsJoining(false);
+        return;
       }
       
       // Join the game via WebSocket
@@ -399,54 +437,140 @@ export default function Home() {
         </TabsContent>
         
         <TabsContent value="joinRoom" className="mt-4">
-          <Card className="border shadow-md">
-            <CardHeader>
-              <h2 className="text-2xl font-heading font-semibold">Join a Room</h2>
-              <p className="text-gray-500 text-sm">Enter a room code to join an existing game</p>
-            </CardHeader>
-            
-            <CardContent>
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="game-code">Room Code</Label>
-                  <Input
-                    id="game-code"
-                    placeholder="Enter room code"
-                    value={gameCode}
-                    onChange={(e) => setGameCode(e.target.value.toUpperCase())}
-                  />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Left column: Manual code entry */}
+            <Card className="border shadow-md">
+              <CardHeader>
+                <h2 className="text-xl font-heading font-semibold">Join with Code</h2>
+                <p className="text-gray-500 text-sm">Enter a room code to join an existing game</p>
+              </CardHeader>
+              
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="game-code">Room Code</Label>
+                    <Input
+                      id="game-code"
+                      placeholder="Enter room code"
+                      value={gameCode}
+                      onChange={(e) => setGameCode(e.target.value.toUpperCase())}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="game-password">Room Password (if required)</Label>
+                    <Input
+                      id="game-password"
+                      type="password"
+                      placeholder="Leave blank if no password"
+                      value={gamePassword}
+                      onChange={(e) => setGamePassword(e.target.value)}
+                    />
+                  </div>
                 </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="game-password">Room Password (if required)</Label>
-                  <Input
-                    id="game-password"
-                    type="password"
-                    placeholder="Leave blank if no password"
-                    value={gamePassword}
-                    onChange={(e) => setGamePassword(e.target.value)}
-                  />
-                </div>
-              </div>
-            </CardContent>
+              </CardContent>
+              
+              <CardFooter>
+                <Button
+                  onClick={handleJoinGame}
+                  disabled={isJoining || !gameCode.trim()}
+                  className="w-full"
+                >
+                  {isJoining ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Joining Room...
+                    </>
+                  ) : (
+                    "Join Room"
+                  )}
+                </Button>
+              </CardFooter>
+            </Card>
             
-            <CardFooter>
-              <Button
-                onClick={handleJoinGame}
-                disabled={isJoining || !gameCode.trim()}
-                className="w-full py-5"
-              >
-                {isJoining ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Joining Room...
-                  </>
+            {/* Right column: Available rooms list */}
+            <Card className="border shadow-md">
+              <CardHeader>
+                <div className="flex justify-between items-center">
+                  <div>
+                    <h2 className="text-xl font-heading font-semibold">Available Rooms</h2>
+                    <p className="text-gray-500 text-sm">Browse active game rooms</p>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => refetchLobbies()}
+                    className="flex items-center"
+                  >
+                    <RefreshCw className="h-4 w-4 mr-1" />
+                    Refresh
+                  </Button>
+                </div>
+              </CardHeader>
+              
+              <CardContent>
+                {lobbiesLoading ? (
+                  <div className="py-8 text-center">
+                    <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2 text-primary" />
+                    <p className="text-gray-500">Loading available rooms...</p>
+                  </div>
+                ) : lobbiesError ? (
+                  <div className="py-8 text-center">
+                    <p className="text-red-500 mb-2">Failed to load available rooms</p>
+                    <Button onClick={() => refetchLobbies()} variant="outline" size="sm">Try Again</Button>
+                  </div>
+                ) : !lobbies || lobbies.length === 0 ? (
+                  <div className="py-8 text-center border rounded-lg bg-gray-50">
+                    <p className="text-gray-500 mb-3">No active rooms found</p>
+                    <p className="text-sm text-gray-400">Create a new room or check back later</p>
+                  </div>
                 ) : (
-                  "Join Room"
+                  <div className="space-y-3 overflow-auto max-h-[400px] pr-2">
+                    {lobbies.map(game => (
+                      <div key={game.id} className="border rounded-lg p-3 hover:bg-gray-50 transition-colors">
+                        <div className="flex justify-between items-start mb-2">
+                          <div>
+                            <h3 className="font-medium truncate">
+                              {game.roomName || `Game #${game.id}`}
+                              {game.hasPassword && (
+                                <span className="inline-block ml-1">
+                                  <Lock className="h-3 w-3 text-amber-500" />
+                                </span>
+                              )}
+                            </h3>
+                            <div className="text-xs text-gray-500">Code: {game.code}</div>
+                          </div>
+                          <div className="text-xs bg-gray-100 px-2 py-1 rounded">
+                            {game.totalRounds} rounds
+                          </div>
+                        </div>
+                        <div className="flex justify-between items-end">
+                          <div className="text-xs text-gray-600">
+                            Timer: {game.timerSeconds}s
+                          </div>
+                          <Button 
+                            size="sm" 
+                            onClick={() => {
+                              setGameCode(game.code);
+                              if (game.hasPassword) {
+                                // Focus on password field if needed
+                                document.getElementById('game-password')?.focus();
+                              } else {
+                                // Direct join if no password
+                                handleJoinGame();
+                              }
+                            }}
+                          >
+                            Join
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 )}
-              </Button>
-            </CardFooter>
-          </Card>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
       </Tabs>
       

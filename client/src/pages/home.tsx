@@ -251,8 +251,11 @@ export default function Home() {
   };
 
   // Handle joining an existing game room with a code
-  const handleJoinGame = async () => {
-    if (!gameCode.trim()) {
+  const handleJoinGame = async (codeOverride?: string) => {
+    // Use passed code or state code
+    const codeToUse = codeOverride || gameCode;
+    
+    if (!codeToUse.trim()) {
       toast({
         title: "Room code required",
         description: "Please enter a room code to join",
@@ -271,10 +274,13 @@ export default function Home() {
       }
       
       // Check if this game needs a password using the local state or looking in the game list
-      const gameToJoin = selectedGame || lobbies?.find(game => game.code === gameCode);
+      const gameToJoin = selectedGame || lobbies?.find(game => game.code === codeToUse);
       
       // If the game has a password and we don't have one provided, show the password dialog
       if (gameToJoin?.hasPassword && !gamePassword.trim()) {
+        // Set the code in the state for later use
+        setGameCode(codeToUse);
+        
         if (!selectedGame) {
           // Only set selectedGame if not already set (prevents infinite loop)
           setSelectedGame(gameToJoin);
@@ -289,7 +295,7 @@ export default function Home() {
         type: GameMessageType.JOIN_GAME,
         payload: {
           username,
-          gameCode,
+          gameCode: codeToUse,
           password: gamePassword, // Will be empty string if no password needed
           sessionId: generateSessionId() // Generate a unique session ID for this tab
         }
@@ -300,7 +306,7 @@ export default function Home() {
       setGamePassword("");
       
       // Navigate to game page, the join logic is handled in the GamePage component
-      navigate(`/game/${gameCode}`);
+      navigate(`/game/${codeToUse}`);
     } catch (error) {
       toast({
         title: "Error",
@@ -546,15 +552,15 @@ export default function Home() {
                           <Button 
                             size="sm" 
                             onClick={() => {
-                              setGameCode(game.code);
                               if (game.hasPassword) {
                                 // Show password dialog for protected rooms
                                 setSelectedGame(game);
+                                setGameCode(game.code);
                                 setShowPasswordDialog(true);
                                 setGamePassword(""); // Reset password field
                               } else {
                                 // Direct join if no password
-                                handleJoinGame();
+                                handleJoinGame(game.code);
                               }
                             }}
                           >

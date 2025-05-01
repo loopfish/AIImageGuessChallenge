@@ -11,12 +11,21 @@ export default function PlayerBanner() {
   
   // Generate a unique key for this browser tab to prevent conflicts between tabs
   const [sessionKey] = useState(() => {
-    const existingKey = localStorage.getItem('sessionId');
-    if (existingKey) return existingKey;
-    
-    const newKey = 'session_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
-    localStorage.setItem('sessionId', newKey);
-    return newKey;
+    try {
+      const existingKey = localStorage.getItem('sessionId');
+      if (existingKey) {
+        console.log("Using existing sessionId:", existingKey);
+        return existingKey;
+      }
+      
+      const newKey = 'session_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
+      localStorage.setItem('sessionId', newKey);
+      console.log("Created new sessionId:", newKey);
+      return newKey;
+    } catch (error) {
+      console.error("Error with sessionId:", error);
+      return 'fallback_session_' + Date.now();
+    }
   });
   
   // Use sessionKey as a prefix for localStorage keys to avoid conflicts between tabs
@@ -40,14 +49,24 @@ export default function PlayerBanner() {
   // Load username from localStorage on component mount (if not in a game)
   useEffect(() => {
     try {
-      const savedName = localStorage.getItem(playerNameKey) || localStorage.getItem('playerName');
-      if (savedName && !username) {
+      const savedNameSession = localStorage.getItem(playerNameKey);
+      const savedNameLegacy = localStorage.getItem('playerName');
+      const savedName = savedNameSession || savedNameLegacy;
+      
+      console.log("Loading playerName from storage:", { 
+        playerNameKey, 
+        savedNameSession, 
+        savedNameLegacy, 
+        savedName 
+      });
+      
+      if (savedName) {
         setUsername(savedName);
       }
     } catch (error) {
-      // Silent fail on localStorage errors
+      console.error("Error loading username:", error);
     }
-  }, [playerNameKey, username]);
+  }, [playerNameKey]);
   
   // Handle logout - reset game state and navigate to home
   const handleLogout = () => {

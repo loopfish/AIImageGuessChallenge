@@ -86,7 +86,18 @@ export default function Home() {
     
     // Save name for future sessions
     try {
+      // Generate a session ID if needed
+      const sessionId = getSessionId();
+      
+      // Save in both the session-specific and the legacy key location
       localStorage.setItem('playerName', username);
+      localStorage.setItem(`playerName_${sessionId}`, username);
+      
+      console.log("Saved username to storage:", {
+        username,
+        sessionId,
+        sessionKey: `playerName_${sessionId}`
+      });
       
       // Set hasEnteredName flag
       localStorage.setItem('hasEnteredName', 'true');
@@ -94,7 +105,7 @@ export default function Home() {
       // Clear any logout flags
       localStorage.removeItem('showNamePrompt');
     } catch (error) {
-      // Silent fail on localStorage errors
+      console.error("Error saving username:", error);
     }
     
     setHasEnteredName(true);

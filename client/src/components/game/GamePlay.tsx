@@ -241,10 +241,24 @@ export default function GamePlay() {
             </CardContent>
           </Card>
           
-          {/* Player Guesses */}
-          <div className="mt-6">
-            <PlayerGuesses />
-          </div>
+          {/* Player Guesses - Only show during round_end */}
+          {gameState?.game?.status === "round_end" ? (
+            <div className="mt-6">
+              <PlayerGuesses />
+            </div>
+          ) : (
+            <div className="mt-6">
+              <div className="bg-white rounded-xl shadow-md p-6">
+                <h3 className="text-lg font-heading font-medium text-neutral-dark mb-2">
+                  Guesses Hidden
+                </h3>
+                <p className="text-gray-500">
+                  Player guesses are hidden until the end of the round to encourage independent thinking.
+                  All guesses will be revealed once the round is complete.
+                </p>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

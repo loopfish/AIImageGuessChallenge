@@ -17,7 +17,9 @@ export default function PlayerGuesses() {
   if (sortedGuesses.length === 0) {
     return (
       <div className="bg-white rounded-xl shadow-md p-6">
-        <h3 className="text-lg font-heading font-medium text-neutral-dark mb-4">Recent Guesses</h3>
+        <h3 className="text-lg font-heading font-medium text-neutral-dark mb-4">
+          Recent Guesses
+        </h3>
         <p className="text-gray-500 text-center py-4">No guesses yet. Be the first to submit a guess!</p>
       </div>
     );

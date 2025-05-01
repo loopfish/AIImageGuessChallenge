@@ -15,6 +15,7 @@ export interface IStorage {
   getGame(id: number): Promise<Game | undefined>;
   getGameByCode(code: string): Promise<Game | undefined>;
   updateGame(id: number, game: Partial<Game>): Promise<Game>;
+  deleteGame(id: number): Promise<boolean>; // Add method to delete a game
   resetAllActiveGames(): Promise<void>;
   getActiveGames(): Promise<Game[]>;
   
@@ -345,11 +346,72 @@ export class MemStorage implements IStorage {
     console.log(`Reset ${activeGames.length} active games and all players`);
   }
   
+  async deleteGame(id: number): Promise<boolean> {
+    // Check if the game exists
+    if (!this.games.has(id)) {
+      return false;
+    }
+    
+    // Get the game to be deleted
+    const game = this.games.get(id);
+    console.log(`Deleting game: ${game?.code} (ID: ${id})`);
+    
+    // Delete the game
+    this.games.delete(id);
+    
+    // Delete associated rounds
+    const roundIds = Array.from(this.rounds.values())
+      .filter(round => round.gameId === id)
+      .map(round => round.id);
+    
+    for (const roundId of roundIds) {
+      this.rounds.delete(roundId);
+      
+      // Delete associated guesses
+      const guessIds = Array.from(this.guesses.values())
+        .filter(guess => guess.roundId === roundId)
+        .map(guess => guess.id);
+      
+      for (const guessId of guessIds) {
+        this.guesses.delete(guessId);
+      }
+      
+      // Delete associated round results
+      const resultIds = Array.from(this.roundResults.values())
+        .filter(result => result.roundId === roundId)
+        .map(result => result.id);
+      
+      for (const resultId of resultIds) {
+        this.roundResults.delete(resultId);
+      }
+    }
+    
+    // Delete associated players
+    const playerIds = Array.from(this.players.values())
+      .filter(player => player.gameId === id)
+      .map(player => player.id);
+    
+    for (const playerId of playerIds) {
+      this.players.delete(playerId);
+    }
+    
+    // Save changes to disk
+    this.saveToDisk();
+    
+    console.log(`Successfully deleted game ID ${id} and all related data`);
+    return true;
+  }
+  
   async getActiveGames(): Promise<Game[]> {
-    // Return games in "lobby" status for room listing
-    return Array.from(this.games.values()).filter(
-      game => game.status === 'lobby'
-    );
+    // Return games in "lobby" status for room listing sorted by creation date (newest first)
+    return Array.from(this.games.values())
+      .filter(game => game.status === 'lobby')
+      .sort((a, b) => {
+        // Sort by creation date, newest first
+        const dateA = a.createdAt instanceof Date ? a.createdAt : new Date(a.createdAt);
+        const dateB = b.createdAt instanceof Date ? b.createdAt : new Date(b.createdAt);
+        return dateB.getTime() - dateA.getTime();
+      });
   }
   
   // Round methods

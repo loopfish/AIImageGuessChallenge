@@ -102,6 +102,7 @@ export enum GameMessageType {
   NEXT_ROUND = "next_round",
   PLAYER_JOINED = "player_joined",
   END_GAME = "end_game",
+  DELETE_GAME = "delete_game", // New: allowing host to delete their game
   PLAYER_UPDATE = "player_update",
   GAME_STATE = "game_state",
   ROUND_START = "round_start",
@@ -351,5 +352,13 @@ export interface ReconnectFailureMessage extends WebSocketMessage {
   payload: {
     message: string;
     error?: string;
+  };
+}
+
+export interface DeleteGameMessage extends WebSocketMessage {
+  type: GameMessageType.DELETE_GAME;
+  payload: {
+    gameId: number;
+    sessionId?: string; // Optional session ID for host identification
   };
 }

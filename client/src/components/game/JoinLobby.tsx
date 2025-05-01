@@ -80,7 +80,9 @@ export default function JoinLobby() {
           currentRound: 0,
           totalRounds: 0,
           timerSeconds: 60,
-          createdAt: new Date()
+          createdAt: new Date(),
+          roomName: null,
+          roomPassword: null
         },
         players: [],
         isConnecting: true, // Special flag to indicate we're in the connecting state

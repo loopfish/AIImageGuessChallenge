@@ -179,6 +179,7 @@ export interface JoinGameMessage extends WebSocketMessage {
   payload: {
     username: string;
     gameCode: string;
+    sessionId?: string; // Optional session ID for unique browser tab identification
   };
 }
 

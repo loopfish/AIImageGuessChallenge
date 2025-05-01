@@ -197,9 +197,18 @@ export function setupWebsocketHandlers(wss: WebSocketServer, storage: IStorage) 
         setTimeout(async () => {
           try {
             // Check if this player is still disconnected
-            const isReconnected = Array.from(clients.values()).some(c => 
-              c.playerId === client.playerId && c.gameId === client.gameId
-            );
+            // For sessionId-enabled clients, require both playerId AND sessionId to match
+            // This allows multiple tabs/windows from same device to be distinct players
+            const isReconnected = Array.from(clients.values()).some(c => {
+              // If we have sessionId, use it for exact matching
+              if (client.sessionId && c.sessionId) {
+                return c.playerId === client.playerId && 
+                       c.gameId === client.gameId && 
+                       c.sessionId === client.sessionId;
+              } 
+              // Fallback to just playerId and gameId matching for backward compatibility
+              return c.playerId === client.playerId && c.gameId === client.gameId;
+            });
             
             // If they haven't reconnected, then mark as inactive
             if (!isReconnected && client.gameId && client.playerId) {
@@ -286,7 +295,7 @@ async function handleJoinGame(
   storage: IStorage
 ) {
   try {
-    const { username, gameCode } = message.payload;
+    const { username, gameCode, sessionId } = message.payload;
     
     // Find the game
     const game = await storage.getGameByCode(gameCode);
@@ -324,6 +333,7 @@ async function handleJoinGame(
     if (client) {
       client.gameId = game.id;
       client.playerId = player.id;
+      client.sessionId = sessionId; // Store sessionId for browser tab identification
       client.connectionTime = Date.now();
       client.lastActive = Date.now();
       
@@ -1310,15 +1320,27 @@ async function handlePlayerReconnect(clientId: string, payload: any, storage: IS
   }
 }
 
-// Find clientId by playerId
-function findClientIdByPlayerId(playerId: number): string | undefined {
+// Find clientId by playerId and optionally sessionId
+function findClientIdByPlayerId(playerId: number, sessionId?: string): string | undefined {
   // Convert Map.entries() to Array before iterating
   const clientEntries = Array.from(clients.entries());
+  
+  // If sessionId is provided, do a more precise match
+  if (sessionId) {
+    for (const [clientId, client] of clientEntries) {
+      if (client.playerId === playerId && client.sessionId === sessionId) {
+        return clientId;
+      }
+    }
+  }
+  
+  // Fallback to just matching by playerId (for backward compatibility)
   for (const [clientId, client] of clientEntries) {
     if (client.playerId === playerId) {
       return clientId;
     }
   }
+  
   return undefined;
 }
 

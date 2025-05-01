@@ -1279,9 +1279,11 @@ async function handlePlayerReconnect(clientId: string, payload: any, storage: IS
     const gameCode = payload.gameCode;
     const username = payload.username;
     const sessionId = payload.sessionId;
+    const wasHost = payload.wasHost === true;
+    const hostSessionId = payload.hostSessionId;
     
     // Log to make debugging easier
-    console.log(`Reconnection data: gameId=${gameId}, playerId=${playerId}, gameCode=${gameCode}, username=${username}, sessionId=${sessionId}`);
+    console.log(`Reconnection data: gameId=${gameId}, playerId=${playerId}, gameCode=${gameCode}, username=${username}, sessionId=${sessionId}, wasHost=${wasHost}, hostSessionId=${hostSessionId}`);
     
     // Prioritize game code for reconnection as it's most reliable across devices
     if (gameCode) {
@@ -1426,8 +1428,29 @@ async function handlePlayerReconnect(clientId: string, payload: any, storage: IS
     
     console.log(`Reconnecting player ${player.username} (${playerId}) to game ${game.code} (${gameId})`);
     
-    // Update player to active
-    await storage.updatePlayer(playerId, { isActive: true });
+    // Check if we need to restore host status
+    if (wasHost && hostSessionId && sessionId === hostSessionId) {
+      console.log(`Restoring host status for player ${player.username} (${playerId}) in game ${game.code}`);
+      // Check if another player is already host
+      const players = await storage.getPlayersByGameId(gameId);
+      const existingHost = players.find(p => p.isHost && p.id !== playerId);
+      
+      if (existingHost) {
+        console.log(`Game ${game.code} already has a host: ${existingHost.username} (${existingHost.id}). Not changing host status.`);
+      } else if (player.userId === game.hostId) {
+        // Only restore host status if this player was the original host (check userId against game.hostId)
+        console.log(`Restoring host status for player ${player.username} (${playerId}) in game ${game.code}`);
+        await storage.updatePlayer(playerId, { isActive: true, isHost: true });
+        // Update player object to reflect the change
+        player.isHost = true;
+      } else {
+        console.log(`Not restoring host status for player ${player.username} - not the original host (userId=${player.userId}, hostId=${game.hostId})`);
+        await storage.updatePlayer(playerId, { isActive: true });
+      }
+    } else {
+      // Regular update - just mark active
+      await storage.updatePlayer(playerId, { isActive: true });
+    }
     
     // Store client association with game and player
     const client = clients.get(clientId);
@@ -1465,7 +1488,8 @@ async function handlePlayerReconnect(clientId: string, payload: any, storage: IS
           playerId,
           gameId,
           gameCode: game.code,
-          sessionId: sessionId // Return the sessionId back to client for confirmation
+          sessionId: sessionId, // Return the sessionId back to client for confirmation
+          isHost: player.isHost  // Include host status information
         }
       }));
     }

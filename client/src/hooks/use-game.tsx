@@ -234,7 +234,17 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
           break;
           
         case GameMessageType.RECONNECT_SUCCESS:
-          console.log("Reconnected successfully");
+          console.log("Reconnected successfully", message.payload);
+          
+          // If we have a game code and host status in the response
+          if (message.payload.gameCode && message.payload.isHost !== undefined) {
+            console.log(`Received host status in reconnection: isHost=${message.payload.isHost}`);
+            // Save host status to local storage if player is a host
+            if (message.payload.isHost) {
+              saveHostStatusToStorage(message.payload.gameId, message.payload.gameCode, true);
+              console.log(`Saved host status for ${message.payload.gameCode} in localStorage`);
+            }
+          }
           break;
           
         case GameMessageType.RECONNECT_FAILURE:
@@ -357,7 +367,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     } catch (error) {
       console.error("Error handling message:", error);
     }
-  }, [getCurrentPlayerFromStorage, saveCurrentPlayerToStorage, toast]);
+  }, [getCurrentPlayerFromStorage, saveCurrentPlayerToStorage, saveHostStatusToStorage, toast]);
   
   // Attempt reconnection with exponential backoff
   // Enhanced reconnection logic 

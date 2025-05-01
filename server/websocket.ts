@@ -283,6 +283,9 @@ async function handleCreateGame(
     if (client) {
       client.gameId = game.id;
       client.playerId = player.id;
+      client.sessionId = sessionId; // Store sessionId for browser tab identification
+      client.connectionTime = Date.now();
+      client.lastActive = Date.now();
     }
     
     // Create gameClients entry
@@ -421,7 +424,7 @@ async function handleJoinGame(
 // Handler for starting a game with first round
 async function handleStartGame(message: StartGameMessage, storage: IStorage) {
   try {
-    const { gameId, prompt, imageUrl: existingImageUrl } = message.payload;
+    const { gameId, prompt, imageUrl: existingImageUrl, sessionId } = message.payload;
     console.log(`Starting game ${gameId} with prompt: "${prompt}"`);
     
     // Get the game
@@ -494,7 +497,7 @@ async function handleStartGame(message: StartGameMessage, storage: IStorage) {
 // Handler for submitting a guess
 async function handleSubmitGuess(message: SubmitGuessMessage, storage: IStorage) {
   try {
-    const { gameId, playerId, roundId, guessText, username, gameCode } = message.payload;
+    const { gameId, playerId, roundId, guessText, username, gameCode, sessionId } = message.payload;
     // Get the clientId from the message object - should have been set during message parsing
     const socketClientId = message.clientId;
     
@@ -526,6 +529,27 @@ async function handleSubmitGuess(message: SubmitGuessMessage, storage: IStorage)
         if (clientPlayer) {
           player = clientPlayer;
           console.log(`Using socket client-mapped player: ${player.username} (ID: ${player.id}), Socket ClientID: ${socketClientId}`);
+        }
+      }
+    }
+    
+    // 1.5 If sessionId was provided, try to find clients with matching sessionId and game
+    if (!player && sessionId) {
+      const clientsWithMatchingSession = Array.from(clients.entries())
+        .filter(([_, client]) => 
+          client.sessionId === sessionId && 
+          client.gameId === gameId
+        );
+        
+      if (clientsWithMatchingSession.length > 0) {
+        // Use the first client with matching session ID
+        const [_, client] = clientsWithMatchingSession[0];
+        if (client.playerId) {
+          const sessionPlayer = allPlayers.find(p => p.id === client.playerId);
+          if (sessionPlayer) {
+            player = sessionPlayer;
+            console.log(`Found player by sessionId: ${player.username} (ID: ${player.id}), SessionID: ${sessionId}`);
+          }
         }
       }
     }
@@ -633,8 +657,8 @@ async function handleSubmitGuess(message: SubmitGuessMessage, storage: IStorage)
     console.log(`Player ${player.username} submitted guess with ${matchedWords.length} matches`);
   } catch (error) {
     console.error("Error submitting guess:", error);
-    // Find client for this player
-    const clientId = findClientIdByPlayerId(message.payload.playerId);
+    // Find client for this player, including the session ID for more precise targeting
+    const clientId = findClientIdByPlayerId(message.payload.playerId, message.payload.sessionId);
     if (clientId) {
       sendErrorToClient(clientId, "Failed to submit guess");
     }
@@ -644,7 +668,7 @@ async function handleSubmitGuess(message: SubmitGuessMessage, storage: IStorage)
 // Handler for advancing to the next round
 async function handleNextRound(message: NextRoundMessage, storage: IStorage) {
   try {
-    const { gameId, prompt } = message.payload;
+    const { gameId, prompt, sessionId } = message.payload;
     console.log(`Starting next round for game ${gameId} with prompt: "${prompt}"`);
     
     // Get the game

@@ -1,5 +1,6 @@
-import type { Express } from "express";
+import express, { type Express } from "express";
 import { createServer, type Server } from "http";
+import path from "path";
 import { storage } from "./storage";
 import { WebSocketServer } from "ws";
 import { setupWebsocketHandlers } from "./websocket";
@@ -19,6 +20,9 @@ import { renderFixedTestPage } from "./fixed-test-page";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
+  
+  // Serve static files from the client/public directory for favicons and manifest
+  app.use(express.static(path.join(import.meta.dirname, "..", "client", "public")));
   
   // Create a WebSocket server on a specific path and make sure to log connections
   const wss = new WebSocketServer({ 

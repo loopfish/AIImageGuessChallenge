@@ -4,12 +4,19 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { PlayIcon, Loader2 } from "lucide-react";
+import { PlayIcon, Loader2, Lock, LockOpen } from "lucide-react";
 import { useGameContext } from "@/hooks/use-game";
 import { GameMessageType } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import LobbyCard from "./LobbyCard";
 import { PlayerConnectionInfo } from "./PlayerConnectionInfo";
+import { Switch } from "@/components/ui/switch";
+import { 
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger 
+} from "@/components/ui/accordion";
 
 export default function HostLobby() {
   const { gameState, socket, isConnected } = useGameContext();
@@ -22,6 +29,11 @@ export default function HostLobby() {
   const [startingGame, setStartingGame] = useState(false);
   const [imageGenerated, setImageGenerated] = useState(false);
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
+  
+  // Private room settings
+  const [isPrivateRoom, setIsPrivateRoom] = useState(false);
+  const [roomName, setRoomName] = useState("");
+  const [roomPassword, setRoomPassword] = useState("");
   
   // Check if the current player is the host by matching player IDs
   const isHost = gameState?.players?.some(player => 
@@ -262,6 +274,63 @@ export default function HostLobby() {
                   </Select>
                 </div>
               </div>
+              
+              {/* Private Room Settings */}
+              <Accordion type="single" collapsible className="mt-6">
+                <AccordionItem value="private-room">
+                  <AccordionTrigger className="py-2">
+                    <div className="flex items-center gap-2">
+                      {isPrivateRoom ? <Lock className="h-4 w-4" /> : <LockOpen className="h-4 w-4" />}
+                      <span>Private Room Settings</span>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <div className="space-y-4 mt-2">
+                      <div className="flex items-center space-x-2">
+                        <Switch 
+                          id="private-room" 
+                          checked={isPrivateRoom}
+                          onCheckedChange={setIsPrivateRoom}
+                        />
+                        <Label htmlFor="private-room" className="cursor-pointer">
+                          {isPrivateRoom ? "Private Room (Password Protected)" : "Public Room (Anyone Can Join)"}
+                        </Label>
+                      </div>
+                      
+                      {isPrivateRoom && (
+                        <div className="space-y-4 mt-2 pt-2 border-t border-gray-100">
+                          <div className="space-y-2">
+                            <Label htmlFor="room-name">Room Name (Optional)</Label>
+                            <Input
+                              id="room-name"
+                              placeholder="My Awesome Game Room"
+                              value={roomName}
+                              onChange={(e) => setRoomName(e.target.value)}
+                            />
+                            <p className="text-xs text-gray-500">Give your room a name to make it easier to identify</p>
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <Label htmlFor="room-password" className="flex items-center">
+                              Room Password
+                              <span className="text-red-500 ml-1">*</span>
+                            </Label>
+                            <Input
+                              id="room-password"
+                              type="password"
+                              placeholder="Enter a password"
+                              value={roomPassword}
+                              onChange={(e) => setRoomPassword(e.target.value)}
+                              required={isPrivateRoom}
+                            />
+                            <p className="text-xs text-gray-500">Share this password with people you want to invite</p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
             </div>
             
             {/* AI-Generated Image Preview */}

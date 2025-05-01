@@ -71,10 +71,17 @@ export function PlayerConnectionInfo({ compact = false }: PlayerConnectionInfoPr
       <Card className={`overflow-hidden bg-white/80 backdrop-blur-sm border-amber-200 shadow-md ${compact ? 'shadow-lg' : ''}`}>
         <CardHeader className={`${compact ? 'p-2' : 'p-3'} bg-gradient-to-r from-amber-50 to-amber-100`}>
           <div className="flex items-center justify-between">
-            <CardTitle className="text-sm font-medium text-amber-800 flex items-center">
-              <WifiIcon className="h-4 w-4 mr-1 text-amber-600" />
-              Connecting
-            </CardTitle>
+            <div className="flex flex-col">
+              <CardTitle className="text-sm font-medium text-amber-800 flex items-center">
+                <WifiIcon className="h-4 w-4 mr-1 text-amber-600" />
+                Connecting
+              </CardTitle>
+              {gameState?.game?.roomName && !compact && (
+                <span className="text-xs text-amber-700 ml-5">
+                  {gameState.game.roomName}
+                </span>
+              )}
+            </div>
             {gameState?.game?.code && (
               <Badge variant="outline" className="bg-amber-100 text-amber-800 hover:bg-amber-200">
                 {gameState.game.code}
@@ -110,10 +117,17 @@ export function PlayerConnectionInfo({ compact = false }: PlayerConnectionInfoPr
       <Card className={`overflow-hidden bg-white/80 backdrop-blur-sm border-blue-200 shadow-md ${compact ? 'shadow-lg' : ''}`}>
         <CardHeader className={`${compact ? 'p-2' : 'p-3'} bg-gradient-to-r from-blue-50 to-blue-100`}>
           <div className="flex items-center justify-between">
-            <CardTitle className="text-sm font-medium text-blue-800 flex items-center">
-              <WifiIcon className="h-4 w-4 mr-1 text-blue-600" />
-              Connected
-            </CardTitle>
+            <div className="flex flex-col">
+              <CardTitle className="text-sm font-medium text-blue-800 flex items-center">
+                <WifiIcon className="h-4 w-4 mr-1 text-blue-600" />
+                Connected
+              </CardTitle>
+              {gameState?.game?.roomName && !compact && (
+                <span className="text-xs text-blue-700 ml-5">
+                  {gameState.game.roomName}
+                </span>
+              )}
+            </div>
             <Badge variant="outline" className="bg-blue-100 text-blue-800 hover:bg-blue-200">
               {gameState?.game?.code || ""}
             </Badge>
@@ -144,13 +158,20 @@ export function PlayerConnectionInfo({ compact = false }: PlayerConnectionInfoPr
       <Card className="overflow-hidden bg-white/80 backdrop-blur-sm border-green-200 shadow-lg">
         <CardHeader className="p-2 bg-gradient-to-r from-green-50 to-green-100">
           <div className="flex items-center justify-between gap-2">
-            <CardTitle className="text-sm font-medium text-green-800 flex items-center">
-              <WifiIcon className="h-3 w-3 mr-1 text-green-600" />
-              <span className="truncate">
-                {currentPlayer.username}
-                {currentPlayer.isHost && <CrownIcon className="inline h-3 w-3 ml-1 text-amber-500" />}
-              </span>
-            </CardTitle>
+            <div className="flex flex-col">
+              <CardTitle className="text-sm font-medium text-green-800 flex items-center">
+                <WifiIcon className="h-3 w-3 mr-1 text-green-600" />
+                <span className="truncate">
+                  {currentPlayer.username}
+                  {currentPlayer.isHost && <CrownIcon className="inline h-3 w-3 ml-1 text-amber-500" />}
+                </span>
+              </CardTitle>
+              {gameState?.game?.roomName && (
+                <span className="text-xs text-gray-600 ml-4">
+                  {gameState.game.roomName}
+                </span>
+              )}
+            </div>
             <div className="flex items-center gap-1">
               <UsersIcon className="h-3 w-3 text-gray-500" />
               <span className="text-xs">{onlinePlayers.length}/{gameState?.players?.length || 0}</span>
@@ -172,7 +193,7 @@ export function PlayerConnectionInfo({ compact = false }: PlayerConnectionInfoPr
           <div className="flex items-center gap-2">
             <CardTitle className="text-sm font-medium text-green-800 flex items-center">
               <WifiIcon className="h-4 w-4 mr-1 text-green-600" />
-              Game Lobby
+              {gameState?.game?.roomName ? gameState.game.roomName : "Game Lobby"}
             </CardTitle>
             <Badge variant="outline" className="bg-green-100 text-green-800 hover:bg-green-200">
               {gameState?.game?.code || ""}

@@ -59,17 +59,32 @@ export default function Home() {
       const savedName = localStorage.getItem('playerName');
       const showPrompt = localStorage.getItem('showNamePrompt');
       
+      console.log("Home - Initial state check:", {
+        savedName,
+        showPrompt,
+        hasEnteredName
+      });
+      
       if (savedName && !showPrompt) {
         setUsername(savedName);
         // If they already have a name and haven't explicitly logged out, they can skip the first step
         setHasEnteredName(true);
+        console.log("Home - User has a saved name, skipping to lobby");
       } else if (showPrompt) {
         // If they explicitly logged out, clear the flag and show the name prompt
         localStorage.removeItem('showNamePrompt');
         setHasEnteredName(false);
+        console.log("Home - User logged out, showing name prompt");
+      } else {
+        // Make sure we don't have a stale hasEnteredName state
+        const hasNameFlag = localStorage.getItem('hasEnteredName');
+        if (!hasNameFlag) {
+          setHasEnteredName(false);
+          console.log("Home - No saved name or flags, showing name prompt");
+        }
       }
     } catch (error) {
-      // Silent fail on localStorage errors
+      console.error("Error checking initial state:", error);
     }
   }, []);
 

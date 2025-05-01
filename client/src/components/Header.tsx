@@ -9,19 +9,20 @@ export default function Header() {
   const { gameState, setGameState } = useGameContext();
   const [username, setUsername] = useState("");
   
-  // Direct lookup of username from localStorage on mount and when location changes
+  // Load username whenever location or gameState changes
   useEffect(() => {
+    // First try to get from localStorage
     try {
       const savedName = localStorage.getItem('playerName');
-      console.log("Header - Loading player name from storage:", savedName);
       if (savedName) {
+        console.log("Header - Found name in localStorage:", savedName);
         setUsername(savedName);
       }
     } catch (error) {
-      console.error("Error loading username from localStorage:", error);
+      console.error("Error reading from localStorage:", error);
     }
     
-    // Also check game state for player name
+    // Also check game state for player name (takes precedence)
     if (gameState?.currentPlayerId && gameState?.players) {
       const currentPlayer = gameState.players.find(p => p.id === gameState.currentPlayerId);
       if (currentPlayer?.username) {
@@ -31,31 +32,19 @@ export default function Header() {
     }
   }, [location, gameState]);
   
-  // Handle logout - reset game state and navigate to home
+  // Handle logout
   const handleLogout = () => {
     try {
-      // Clear usernames from localStorage
+      // Clear name and game state
       localStorage.removeItem('playerName');
-      
-      // Also clear hasEnteredName flag that Home component uses
       localStorage.removeItem('hasEnteredName');
-      
-      // Set a special flag to force the name prompt to appear
       localStorage.setItem('showNamePrompt', 'true');
       
-      console.log("Logged out, cleared localStorage");
+      // Explicitly force page reload to ensure components reset correctly
+      window.location.href = '/';
     } catch (error) {
       console.error("Error during logout:", error);
     }
-    
-    // Reset username in current component
-    setUsername("");
-    
-    // Reset game state
-    setGameState(null);
-    
-    // Navigate to home page
-    navigate('/');
   };
 
   return (
@@ -100,7 +89,6 @@ export default function Header() {
           <div className="bg-primary-foreground/10 py-1 px-3 rounded-full flex items-center justify-between w-full max-w-xs">
             <div>
               {username ? (
-                // If username exists, show the player info as a simple name with status
                 <div className="flex flex-col">
                   <div className="flex items-center gap-1">
                     <span className="font-medium text-sm">{username}</span>
@@ -113,7 +101,6 @@ export default function Header() {
                   )}
                 </div>
               ) : (
-                // Empty div to maintain layout
                 <div></div>
               )}
             </div>

@@ -223,7 +223,9 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
                     currentRound: 0,
                     totalRounds: 0,
                     timerSeconds: 60,
-                    createdAt: new Date()
+                    createdAt: new Date(),
+                    roomName: null,
+                    roomPassword: null
                   },
                   players: [],
                   currentPlayerId: message.payload.playerId,

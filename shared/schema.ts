@@ -17,6 +17,8 @@ export const games = pgTable("games", {
   id: serial("id").primaryKey(),
   code: text("code").notNull().unique(),
   hostId: integer("host_id").notNull(),
+  roomName: text("room_name"),
+  roomPassword: text("room_password"),
   status: text("status").notNull().default("lobby"), // lobby, playing, finished
   currentRound: integer("current_round").notNull().default(1),
   totalRounds: integer("total_rounds").notNull().default(5),
@@ -171,6 +173,8 @@ export interface CreateGameMessage extends WebSocketMessage {
     username: string;
     timerSeconds: number;
     totalRounds: number;
+    roomName?: string; // Optional room name
+    roomPassword?: string; // Optional room password
     sessionId?: string; // Optional session ID for unique browser tab identification
   };
 }
@@ -180,6 +184,7 @@ export interface JoinGameMessage extends WebSocketMessage {
   payload: {
     username: string;
     gameCode: string;
+    password?: string; // Optional password for joining private rooms
     sessionId?: string; // Optional session ID for unique browser tab identification
   };
 }

@@ -312,23 +312,23 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     isReconnecting.current = true;
     reconnectAttempts.current++;
     
-    // Store game code for reconnection
+    // Store game code for reconnection with session-specific storage
     let currentGameCode = null;
     if (gameState?.game?.code) {
       currentGameCode = gameState.game.code;
-      // Save to localStorage as a backup
+      // Save to localStorage as a backup with session-specific key
       try {
-        localStorage.setItem('lastGameCode', currentGameCode);
-        console.log(`Saved game code for reconnection: ${currentGameCode}`);
+        localStorage.setItem(`gameCode_${sessionId}`, currentGameCode);
+        console.log(`Saved game code ${currentGameCode} for session ${sessionId}`);
       } catch (err) {
         console.error("Error saving game code:", err);
       }
     } else {
-      // Try to get from localStorage
+      // Try to get from localStorage using session-specific key
       try {
-        currentGameCode = localStorage.getItem('lastGameCode');
+        currentGameCode = localStorage.getItem(`gameCode_${sessionId}`);
         if (currentGameCode) {
-          console.log(`Retrieved stored game code: ${currentGameCode}`);
+          console.log(`Retrieved stored game code ${currentGameCode} for session ${sessionId}`);
         }
       } catch (err) {
         console.error("Error retrieving game code:", err);
@@ -362,7 +362,8 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
                     type: GameMessageType.RECONNECT_REQUEST,
                     payload: {
                       gameCode: currentGameCode,
-                      playerId: getCurrentPlayerFromStorage()
+                      playerId: getCurrentPlayerFromStorage(),
+                      sessionId: sessionId // Add session ID for unique identification
                     }
                   };
                   socket.send(JSON.stringify(reconnectMsg));
@@ -422,12 +423,13 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
           if (location.startsWith('/game/') && gameCode && gameCode !== 'lobby') {
             const playerId = getCurrentPlayerFromStorage();
             if (playerId) {
-              console.log(`Sending reconnection request for player ${playerId} in game ${gameCode}`);
+              console.log(`Sending reconnection request for player ${playerId} in game ${gameCode} with session ${sessionId}`);
               socket.send(JSON.stringify({
                 type: GameMessageType.RECONNECT_REQUEST,
                 payload: { 
                   playerId,
-                  gameCode // Always include the game code for proper game matching
+                  gameCode, // Always include the game code for proper game matching
+                  sessionId // Include session ID for unique player identification
                 }
               }));
             }
@@ -466,7 +468,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
         reject(error);
       }
     });
-  }, [location, gameCode, handleWebSocketMessage, getCurrentPlayerFromStorage, attemptReconnect]);
+  }, [location, gameCode, handleWebSocketMessage, getCurrentPlayerFromStorage, attemptReconnect, sessionId]);
   
   // Auto-connect on mount (just once)
   useEffect(() => {
@@ -600,7 +602,8 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
             payload: {
               playerId: gameState.currentPlayerId,
               gameId: gameState.game.id,
-              timestamp: Date.now()
+              timestamp: Date.now(),
+              sessionId: sessionId // Include session ID in heartbeats
             }
           };
           
@@ -625,7 +628,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
         heartbeatTimer.current = null;
       }
     };
-  }, [isConnected, gameState?.game?.id, gameState?.currentPlayerId]);
+  }, [isConnected, gameState?.game?.id, gameState?.currentPlayerId, sessionId]);
   
   // Prevent unnecessary WebSocket reconnections
   useEffect(() => {
@@ -636,27 +639,26 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
       // Create a reference to the current socket to avoid TypeScript errors
       const socket = socketRef.current;
       
-      // Add a more robust error handler to the socket
-      const existingOnError = socket.onerror;
-      socket.onerror = (event) => {
+      // Create custom event handlers that properly maintain context
+      const originalOnError = socket.onerror;
+      socket.onerror = function(this: WebSocket, event: Event) {
         console.error("WebSocket error in stable connection:", event);
-        if (existingOnError && typeof existingOnError === 'function') {
-          // Direct call without .call to avoid TS errors
-          existingOnError(event);
+        // The use of function() and 'this' ensures proper context
+        if (originalOnError) {
+          originalOnError.call(this, event);
         }
       };
       
       // Override the close handler to prevent auto-disconnect
-      const existingOnClose = socket.onclose;
-      socket.onclose = (event) => {
+      const originalOnClose = socket.onclose;
+      socket.onclose = function(this: WebSocket, event: CloseEvent) {
         console.warn("WebSocket closed in stable connection:", event);
         // Only attempt reconnect if it wasn't a clean closure
         if (!event.wasClean) {
           attemptReconnect();
         }
-        if (existingOnClose && typeof existingOnClose === 'function') {
-          // Direct call without .call to avoid TS errors
-          existingOnClose(event);
+        if (originalOnClose) {
+          originalOnClose.call(this, event);
         }
       };
     }

@@ -1,19 +1,9 @@
 import { useState, useEffect } from "react";
-import { UserRound, Pencil } from "lucide-react";
+import { UserRound, Pencil, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Dialog } from "@radix-ui/react-dialog";
-import {
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogFooter,
-  DialogClose,
-} from "@/components/ui/dialog";
 import { useGameContext } from "@/hooks/use-game";
 
 export default function PlayerBanner() {
@@ -108,81 +98,95 @@ export default function PlayerBanner() {
   
   return (
     <div className="player-banner">
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        {username ? (
-          // If username exists, show the player info with Drawasaurus-style
-          <div className="flex items-center gap-2">
-            <div className="relative group">
-              <Avatar className={`h-8 w-8 ${getAvatarColor(username)}`}>
-                <AvatarFallback>{getInitials(username)}</AvatarFallback>
-              </Avatar>
-              
-              {/* Hidden edit button that appears on hover */}
-              <DialogTrigger asChild>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="h-5 w-5 absolute -top-2 -right-2 rounded-full bg-white shadow-sm text-primary opacity-0 group-hover:opacity-100 transition-opacity"
-                >
-                  <Pencil className="h-3 w-3" />
-                </Button>
-              </DialogTrigger>
+      {username ? (
+        // If username exists, show the player info with Drawasaurus-style
+        <div className="flex items-center gap-2">
+          <div className="relative group">
+            <Avatar className={`h-8 w-8 ${getAvatarColor(username)}`}>
+              <AvatarFallback>{getInitials(username)}</AvatarFallback>
+            </Avatar>
+            
+            {/* Edit button */}
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-5 w-5 absolute -top-2 -right-2 rounded-full bg-white shadow-sm text-primary opacity-0 group-hover:opacity-100 transition-opacity"
+              onClick={() => setIsDialogOpen(true)}
+            >
+              <Pencil className="h-3 w-3" />
+            </Button>
+          </div>
+          
+          <div className="flex flex-col">
+            <span className="font-medium text-xs leading-tight">{username}</span>
+            {gameState?.currentPlayerId && (
+              <span className="text-[10px] text-white/75 leading-tight">
+                {gameState.game?.status === "playing" ? "Playing" : "In lobby"}
+              </span>
+            )}
+          </div>
+        </div>
+      ) : (
+        // If no username, show a button to set one
+        <Button size="sm" className="gap-2" onClick={() => setIsDialogOpen(true)}>
+          <UserRound className="h-4 w-4" />
+          Set Your Name
+        </Button>
+      )}
+      
+      {/* Simple Modal Dialog */}
+      {isDialogOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md mx-4">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-medium">Your Player Name</h3>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={() => setIsDialogOpen(false)}
+              >
+                <X className="h-4 w-4" />
+              </Button>
             </div>
             
-            <div className="flex flex-col">
-              <span className="font-medium text-xs leading-tight">{username}</span>
-              {gameState?.currentPlayerId && (
-                <span className="text-[10px] text-white/75 leading-tight">
-                  {gameState.game?.status === "playing" ? "Playing" : "In lobby"}
-                </span>
-              )}
-            </div>
-          </div>
-        ) : (
-          // If no username, show a button to set one
-          <DialogTrigger asChild>
-            <Button size="sm" className="gap-2">
-              <UserRound className="h-4 w-4" />
-              Set Your Name
-            </Button>
-          </DialogTrigger>
-        )}
-        
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Your Player Name</DialogTitle>
-            <DialogDescription>
+            <p className="text-sm text-gray-500 mb-4">
               This name will be visible to other players in the game.
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="username">Player Name</Label>
-              <Input
-                id="username"
-                placeholder="Enter your name"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                maxLength={15}
-                autoFocus
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                Maximum 15 characters
-              </p>
+            </p>
+            
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="username">Player Name</Label>
+                <Input
+                  id="username"
+                  placeholder="Enter your name"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  maxLength={15}
+                  autoFocus
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Maximum 15 characters
+                </p>
+              </div>
+            </div>
+            
+            <div className="flex justify-end gap-2 mt-6">
+              <Button 
+                variant="outline" 
+                onClick={() => setIsDialogOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleSaveUsername} 
+                disabled={!username.trim()}
+              >
+                Save
+              </Button>
             </div>
           </div>
-          
-          <DialogFooter>
-            <DialogClose asChild>
-              <Button variant="outline">Cancel</Button>
-            </DialogClose>
-            <Button onClick={handleSaveUsername} disabled={!username.trim()}>
-              Save
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        </div>
+      )}
     </div>
   );
 }

@@ -273,6 +273,7 @@ export interface HeartbeatMessage extends WebSocketMessage {
     playerId: number;
     gameId: number;
     timestamp: number;
+    sessionId?: string; // Optional session ID for unique browser tab identification
   };
 }
 
@@ -310,5 +311,35 @@ export interface ServerRestartMessage extends WebSocketMessage {
   type: GameMessageType.SERVER_RESTART;
   payload: {
     message: string;
+  };
+}
+
+export interface ReconnectRequestMessage extends WebSocketMessage {
+  type: GameMessageType.RECONNECT_REQUEST;
+  payload: {
+    gameCode?: string;
+    gameId?: number;
+    playerId?: number;
+    username?: string;
+    sessionId?: string; // Session ID for unique browser identification
+  };
+}
+
+export interface ReconnectSuccessMessage extends WebSocketMessage {
+  type: GameMessageType.RECONNECT_SUCCESS;
+  payload: {
+    message: string;
+    playerId: number;
+    gameId: number;
+    gameCode: string;
+    sessionId?: string; // Return the session ID for confirmation
+  };
+}
+
+export interface ReconnectFailureMessage extends WebSocketMessage {
+  type: GameMessageType.RECONNECT_FAILURE;
+  payload: {
+    message: string;
+    error?: string;
   };
 }

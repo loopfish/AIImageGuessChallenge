@@ -1234,6 +1234,7 @@ async function handlePlayerReconnect(clientId: string, payload: any, storage: IS
     if (client) {
       client.gameId = gameId;
       client.playerId = playerId;
+      client.sessionId = sessionId;
       client.connectionTime = Date.now();
       client.lastActive = Date.now();
       
@@ -1263,7 +1264,8 @@ async function handlePlayerReconnect(clientId: string, payload: any, storage: IS
           message: "Reconnection successful",
           playerId,
           gameId,
-          gameCode: game.code
+          gameCode: game.code,
+          sessionId: sessionId // Return the sessionId back to client for confirmation
         }
       }));
     }

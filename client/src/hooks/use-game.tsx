@@ -46,6 +46,35 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
   const heartbeatTimer = useRef<NodeJS.Timeout | null>(null);
   const lastHeartbeatTime = useRef<number>(0);
   
+  // Function to save host status in localStorage for a specific game
+  const saveHostStatusToStorage = useCallback((gameId: number, gameCode: string, isHost: boolean) => {
+    try {
+      if (isHost) {
+        // Save host status with game-specific key
+        localStorage.setItem(`hostStatus_${gameCode}`, 'true');
+        localStorage.setItem(`hostSessionId_${gameCode}`, sessionId);
+        console.log(`Saved host status for game ${gameCode} with session ${sessionId}`);
+      }
+    } catch (err) {
+      console.error("Error saving host status:", err);
+    }
+  }, [sessionId]);
+  
+  // Function to check if user was the host of a specific game
+  const wasHostForGame = useCallback((gameCode: string): { wasHost: boolean, sessionId: string | null } => {
+    try {
+      const hostStatus = localStorage.getItem(`hostStatus_${gameCode}`);
+      const hostSessionId = localStorage.getItem(`hostSessionId_${gameCode}`);
+      return { 
+        wasHost: hostStatus === 'true',
+        sessionId: hostSessionId
+      };
+    } catch (err) {
+      console.error("Error retrieving host status:", err);
+      return { wasHost: false, sessionId: null };
+    }
+  }, []);
+  
   // Extract game code from URL
   const gameCode = useMemo(() => {
     const urlParts = location.split('/');
@@ -85,6 +114,16 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
       // Debug log for game state messages
       if (message.type === GameMessageType.GAME_STATE) {
         console.log("Full game state message:", message.payload);
+        
+        // Check if the player is a host and save that status for future reconnections
+        const gameData = message.payload as GameState;
+        if (gameData?.game?.code && gameData?.players && gameData?.currentPlayerId) {
+          const currentPlayer = gameData.players.find(p => p.id === gameData.currentPlayerId);
+          if (currentPlayer?.isHost) {
+            // Save host status for this game
+            saveHostStatusToStorage(gameData.game.id, gameData.game.code, true);
+          }
+        }
       }
       
       // Handle different message types
@@ -380,12 +419,18 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
             setTimeout(() => {
               if (socket.readyState === WebSocket.OPEN) {
                 try {
+                  // Check if user was previously a host of this game
+                  const { wasHost, sessionId: hostSessionId } = wasHostForGame(currentGameCode);
+                  
+                  // Include hostInfo in reconnection attempt if user was the host
                   const reconnectMsg = {
                     type: GameMessageType.RECONNECT_REQUEST,
                     payload: {
                       gameCode: currentGameCode,
                       playerId: getCurrentPlayerFromStorage(),
-                      sessionId: sessionId // Add session ID for unique identification
+                      sessionId: sessionId, // Add session ID for unique identification
+                      wasHost: wasHost,
+                      hostSessionId: hostSessionId // Include original host session ID
                     }
                   };
                   socket.send(JSON.stringify(reconnectMsg));
@@ -446,12 +491,20 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
             const playerId = getCurrentPlayerFromStorage();
             if (playerId) {
               console.log(`Sending reconnection request for player ${playerId} in game ${gameCode} with session ${sessionId}`);
+              
+              // Check if the user was previously a host for this game
+              const { wasHost, sessionId: hostSessionId } = wasHostForGame(gameCode);
+              
+              console.log(`Host status check for ${gameCode}: wasHost=${wasHost}, hostSessionId=${hostSessionId}`);
+              
               socket.send(JSON.stringify({
                 type: GameMessageType.RECONNECT_REQUEST,
                 payload: { 
                   playerId,
                   gameCode, // Always include the game code for proper game matching
-                  sessionId // Include session ID for unique player identification
+                  sessionId, // Include session ID for unique player identification
+                  wasHost: wasHost, // Include previous host status
+                  hostSessionId: hostSessionId // Include the original host session ID
                 }
               }));
             }

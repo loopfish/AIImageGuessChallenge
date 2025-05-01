@@ -290,17 +290,19 @@ export default function Home() {
         <Card className="bg-white shadow-lg">
           <CardHeader className="text-center">
             <UserRound className="w-12 h-12 mx-auto text-primary mb-2" />
-            <h1 className="text-2xl font-heading font-bold">What's your name?</h1>
-            <p className="text-gray-500 text-sm">Enter a name to be used in the game</p>
+            <h1 className="text-2xl font-heading font-bold">Welcome to the AI Prompt Guessing Game</h1>
+            <p className="text-gray-500 text-sm mt-2">
+              Challenge your friends to guess the prompts behind AI-generated images
+            </p>
           </CardHeader>
           
           <CardContent>
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="player-name">Your Name</Label>
+                <Label htmlFor="player-name">Enter Your Name</Label>
                 <Input
                   id="player-name"
-                  placeholder="Enter your name"
+                  placeholder="Your name"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   autoFocus
@@ -320,7 +322,7 @@ export default function Home() {
               disabled={!username.trim()} 
               className="w-full py-5"
             >
-              Continue
+              Enter Game Lobby
             </Button>
           </CardFooter>
         </Card>

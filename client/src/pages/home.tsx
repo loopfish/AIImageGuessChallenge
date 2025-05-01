@@ -469,59 +469,8 @@ export default function Home() {
         </TabsContent>
         
         <TabsContent value="joinRoom" className="mt-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Left column: Manual code entry */}
-            <Card className="border shadow-md">
-              <CardHeader>
-                <h2 className="text-xl font-heading font-semibold">Join with Code</h2>
-                <p className="text-gray-500 text-sm">Enter a room code to join an existing game</p>
-              </CardHeader>
-              
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="game-code">Room Code</Label>
-                    <Input
-                      id="game-code"
-                      placeholder="Enter room code"
-                      value={gameCode}
-                      onChange={(e) => setGameCode(e.target.value.toUpperCase())}
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="game-password">Room Password (if required)</Label>
-                    <Input
-                      id="game-password"
-                      type="password"
-                      placeholder="Leave blank if no password"
-                      value={gamePassword}
-                      onChange={(e) => setGamePassword(e.target.value)}
-                    />
-                  </div>
-                </div>
-              </CardContent>
-              
-              <CardFooter>
-                <Button
-                  onClick={handleJoinGame}
-                  disabled={isJoining || !gameCode.trim()}
-                  className="w-full"
-                >
-                  {isJoining ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Joining Room...
-                    </>
-                  ) : (
-                    "Join Room"
-                  )}
-                </Button>
-              </CardFooter>
-            </Card>
-            
-            {/* Right column: Available rooms list */}
-            <Card className="border shadow-md">
+          {/* Available rooms list */}
+          <Card className="border shadow-md">
               <CardHeader>
                 <div className="flex justify-between items-center">
                   <div>
@@ -602,7 +551,6 @@ export default function Home() {
                 )}
               </CardContent>
             </Card>
-          </div>
         </TabsContent>
       </Tabs>
       

@@ -127,28 +127,29 @@ export default function PlayerBanner() {
         </Button>
       )}
       
-      {/* Simple Modal Dialog */}
+      {/* Edit Name Dialog */}
       {isDialogOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md mx-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
+          <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-lg p-6 w-full max-w-md mx-4">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-medium">Your Player Name</h3>
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white">Your Player Name</h3>
               <Button 
                 variant="ghost" 
                 size="icon" 
                 onClick={() => setIsDialogOpen(false)}
+                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
               >
                 <X className="h-4 w-4" />
               </Button>
             </div>
             
-            <p className="text-sm text-gray-500 mb-4">
+            <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
               This name will be visible to other players in the game.
             </p>
             
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="username">Player Name</Label>
+                <Label htmlFor="username" className="text-gray-700 dark:text-gray-300">Player Name</Label>
                 <Input
                   id="username"
                   placeholder="Enter your name"
@@ -156,8 +157,9 @@ export default function PlayerBanner() {
                   onChange={(e) => setUsername(e.target.value)}
                   maxLength={15}
                   autoFocus
+                  className="bg-white text-gray-900 border-gray-300 dark:bg-zinc-800 dark:text-gray-100 dark:border-gray-700"
                 />
-                <p className="text-xs text-muted-foreground mt-1">
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                   Maximum 15 characters
                 </p>
               </div>
@@ -167,12 +169,14 @@ export default function PlayerBanner() {
               <Button 
                 variant="outline" 
                 onClick={() => setIsDialogOpen(false)}
+                className="border-gray-300 text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800"
               >
                 Cancel
               </Button>
               <Button 
                 onClick={handleSaveUsername} 
                 disabled={!username.trim()}
+                className="bg-primary hover:bg-primary/90 text-white"
               >
                 Save
               </Button>

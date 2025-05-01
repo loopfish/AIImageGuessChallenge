@@ -58,6 +58,12 @@ export default function PlayerBanner() {
       try {
         localStorage.setItem(playerNameKey, username);
         localStorage.setItem('playerName', username); // For backward compatibility
+        
+        // Clear showNamePrompt flag if it exists
+        localStorage.removeItem('showNamePrompt');
+        
+        // Set hasEnteredName
+        localStorage.setItem('hasEnteredName', 'true');
       } catch (error) {
         // Silent fail on localStorage errors
       }
@@ -68,12 +74,21 @@ export default function PlayerBanner() {
   // Handle logout - reset game state and navigate to home
   const handleLogout = () => {
     try {
-      // Clear only the username, not the session ID
+      // Clear usernames from all possible storages
       localStorage.removeItem(playerNameKey);
       localStorage.removeItem('playerName');
+      
+      // Also clear hasEnteredName flag that Home component uses
+      localStorage.removeItem('hasEnteredName');
+      
+      // Set a special flag to force the name prompt to appear
+      localStorage.setItem('showNamePrompt', 'true');
     } catch (error) {
       // Silent fail on localStorage errors
     }
+    
+    // Reset username in current component
+    setUsername("");
     
     // Reset game state
     setGameState(null);

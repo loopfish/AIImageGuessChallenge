@@ -57,10 +57,16 @@ export default function Home() {
   useEffect(() => {
     try {
       const savedName = localStorage.getItem('playerName');
-      if (savedName) {
+      const showPrompt = localStorage.getItem('showNamePrompt');
+      
+      if (savedName && !showPrompt) {
         setUsername(savedName);
-        // If they already have a name, they can skip the first step
+        // If they already have a name and haven't explicitly logged out, they can skip the first step
         setHasEnteredName(true);
+      } else if (showPrompt) {
+        // If they explicitly logged out, clear the flag and show the name prompt
+        localStorage.removeItem('showNamePrompt');
+        setHasEnteredName(false);
       }
     } catch (error) {
       // Silent fail on localStorage errors
@@ -81,6 +87,12 @@ export default function Home() {
     // Save name for future sessions
     try {
       localStorage.setItem('playerName', username);
+      
+      // Set hasEnteredName flag
+      localStorage.setItem('hasEnteredName', 'true');
+      
+      // Clear any logout flags
+      localStorage.removeItem('showNamePrompt');
     } catch (error) {
       // Silent fail on localStorage errors
     }

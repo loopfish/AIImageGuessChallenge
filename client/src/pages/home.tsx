@@ -84,30 +84,28 @@ export default function Home() {
       return;
     }
     
-    // Save name for future sessions
+    // Save name for future sessions with extra debugging
     try {
-      // Generate a session ID if needed
-      const sessionId = generateSessionId();
-      
-      // Save in both the session-specific and the legacy key location
+      // Always use the main playerName key for simpler access
       localStorage.setItem('playerName', username);
-      localStorage.setItem(`playerName_${sessionId}`, username);
-      
-      console.log("Saved username to storage:", {
-        username,
-        sessionId,
-        sessionKey: `playerName_${sessionId}`
-      });
       
       // Set hasEnteredName flag
       localStorage.setItem('hasEnteredName', 'true');
       
       // Clear any logout flags
       localStorage.removeItem('showNamePrompt');
+      
+      // Debug what we're saving
+      console.log("Saved username to localStorage:", {
+        username,
+        hasEnteredName: true,
+        showNamePrompt: null
+      });
     } catch (error) {
       console.error("Error saving username:", error);
     }
     
+    // Update the state to advance to the next screen
     setHasEnteredName(true);
   };
 

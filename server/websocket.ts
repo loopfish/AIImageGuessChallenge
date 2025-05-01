@@ -421,10 +421,92 @@ async function handleJoinGame(
   }
 }
 
+// Utility function to validate host permissions with sessionId support
+async function validateHostPermission(gameId: number, sessionId: string | undefined, clientId: string | undefined, storage: IStorage): Promise<boolean> {
+  try {
+    // Get the game 
+    const game = await storage.getGame(gameId);
+    if (!game) {
+      console.error(`Game ${gameId} not found during host validation`);
+      return false;
+    }
+    
+    // If we have a clientId, that's most reliable for finding the player
+    if (clientId && clients.has(clientId)) {
+      const client = clients.get(clientId);
+      if (client && client.playerId) {
+        const player = await storage.getPlayer(client.playerId);
+        if (player && player.isHost) {
+          // Verify sessionId matches if both are provided
+          if (sessionId && client.sessionId && sessionId !== client.sessionId) {
+            console.error(`SessionId mismatch during host validation: ${sessionId} vs ${client.sessionId}`);
+            return false;
+          }
+          console.log(`Host validated via client ID: ${player.username} (ID: ${player.id})`);
+          return true;
+        }
+      }
+    }
+    
+    // If we have a sessionId, find clients with this sessionId in this game
+    if (sessionId) {
+      const matchingClients = Array.from(clients.entries())
+        .filter(([_, client]) => 
+          client.sessionId === sessionId && 
+          client.gameId === gameId
+        );
+      
+      if (matchingClients.length > 0) {
+        // Check if any of these clients has a player that is host
+        for (const [_, client] of matchingClients) {
+          if (client.playerId) {
+            const player = await storage.getPlayer(client.playerId);
+            if (player && player.isHost) {
+              console.log(`Host validated via sessionId: ${player.username} (ID: ${player.id})`);
+              return true;
+            }
+          }
+        }
+      }
+    }
+    
+    // If all direct checks failed, get all players and validate host by game hostId
+    if (game.hostId) {
+      // Check all connected clients for this game to find the host
+      const gameClientIds = gameClients.get(gameId);
+      if (gameClientIds) {
+        for (const cId of gameClientIds) {
+          const client = clients.get(cId);
+          if (client && client.playerId) {
+            const player = await storage.getPlayer(client.playerId);
+            if (player && player.userId === game.hostId) {
+              console.log(`Host validated via game hostId: ${player.username} (ID: ${player.id})`);
+              return true;
+            }
+          }
+        }
+      }
+    }
+
+    console.error(`Host validation failed for game ${gameId}, session ${sessionId}`);
+    return false;
+  } catch (error) {
+    console.error("Error validating host permission:", error);
+    return false;
+  }
+}
+
 // Handler for starting a game with first round
 async function handleStartGame(message: StartGameMessage, storage: IStorage) {
   try {
     const { gameId, prompt, imageUrl: existingImageUrl, sessionId } = message.payload;
+    
+    // Verify that the request comes from the host using sessionId
+    const isHost = await validateHostPermission(gameId, sessionId, message.clientId, storage);
+    if (!isHost) {
+      console.error(`Non-host attempt to start game ${gameId} with session ${sessionId}`);
+      throw new Error("Only the host can start the game");
+    }
     console.log(`Starting game ${gameId} with prompt: "${prompt}"`);
     
     // Get the game
@@ -669,6 +751,14 @@ async function handleSubmitGuess(message: SubmitGuessMessage, storage: IStorage)
 async function handleNextRound(message: NextRoundMessage, storage: IStorage) {
   try {
     const { gameId, prompt, sessionId } = message.payload;
+    
+    // Verify that the request comes from the host using sessionId
+    const isHost = await validateHostPermission(gameId, sessionId, message.clientId, storage);
+    if (!isHost) {
+      console.error(`Non-host attempt to advance round in game ${gameId} with session ${sessionId}`);
+      throw new Error("Only the host can advance to the next round");
+    }
+    
     console.log(`Starting next round for game ${gameId} with prompt: "${prompt}"`);
     
     // Get the game

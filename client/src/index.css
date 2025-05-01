@@ -2,6 +2,21 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Player Banner Styles */
+@layer components {
+  .player-banner {
+    @apply flex items-center gap-2 text-white font-medium;
+  }
+  
+  .player-banner .avatar {
+    @apply ring-2 ring-white/20 shadow-md transition-all duration-300;
+  }
+  
+  .player-banner:hover .avatar {
+    @apply ring-white/40;
+  }
+}
+
 :root {
   --background: 0 0% 100%;
   --foreground: 20 14.3% 4.1%;

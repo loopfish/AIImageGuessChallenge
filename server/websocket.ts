@@ -886,6 +886,59 @@ async function handleEndGame(gameId: number, storage: IStorage) {
   }
 }
 
+// Handler for delete game request
+async function handleDeleteGame(
+  gameId: number, 
+  sessionId: string | undefined, 
+  clientId: string,
+  storage: IStorage
+) {
+  try {
+    console.log(`Received delete game request for game ${gameId} from client ${clientId}`);
+    
+    // Validate if the requester is the host
+    const isHost = await validateHostPermission(gameId, sessionId, clientId, storage);
+    if (!isHost) {
+      console.error(`Client ${clientId} attempted to delete game ${gameId} but is not the host`);
+      return sendErrorToClient(clientId, "Only the host can delete a game");
+    }
+    
+    // Get the game to delete
+    const game = await storage.getGame(gameId);
+    if (!game) {
+      console.error(`Game ${gameId} not found for deletion`);
+      return sendErrorToClient(clientId, "Game not found");
+    }
+    
+    // Notify all connected clients that the game is being deleted
+    sendToGame(gameId, {
+      type: GameMessageType.DELETE_GAME,
+      payload: { 
+        message: "Game has been deleted by the host. You'll be redirected to the home page." 
+      }
+    });
+    
+    console.log(`Deleting game ${gameId} (${game.code})`);
+    
+    // Delete the game from storage
+    const deleteResult = await storage.deleteGame(gameId);
+    
+    // Clean up game clients and online players
+    if (gameClients.has(gameId)) {
+      gameClients.delete(gameId);
+    }
+    
+    if (onlinePlayers.has(gameId)) {
+      onlinePlayers.delete(gameId);
+    }
+    
+    console.log(`Game ${gameId} (${game.code}) ${deleteResult ? 'successfully deleted' : 'delete failed'}`);
+  } catch (error) {
+    console.error(`Error deleting game: ${error}`);
+    sendErrorToClient(clientId, "Failed to delete game");
+  }
+}
+
 // Handler for when a player disconnects
 async function handlePlayerDisconnect(
   clientId: string, 

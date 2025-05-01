@@ -21,7 +21,7 @@ import {
   guesses,
   roundResults
 } from "@shared/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, desc } from "drizzle-orm";
 
 export class DatabaseStorage implements IStorage {
   
@@ -180,13 +180,16 @@ export class DatabaseStorage implements IStorage {
   async getActiveGames(): Promise<Game[]> {
     try {
       // Get all games in "lobby" status for room listing, sorted by creation date (newest first)
+      // First get games in lobby status
       const activeGames = await db
         .select()
         .from(games)
-        .where(eq(games.status, 'lobby'))
-        .orderBy(games.createdAt, 'desc'); // Order by creation date, newest first
-      
-      return activeGames;
+        .where(eq(games.status, 'lobby'));
+        
+      // Sort them by creation date (newest first) in JavaScript
+      return activeGames.sort((a, b) => {
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      });
     } catch (error) {
       console.error('Error getting active games:', error);
       throw error;

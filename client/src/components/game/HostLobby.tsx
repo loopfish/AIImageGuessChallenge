@@ -232,105 +232,34 @@ export default function HostLobby() {
               <p className="text-sm text-gray-500">Be creative! This is what players will try to guess.</p>
             </div>
             
-            {/* Game Settings */}
-            <div className="game-settings space-y-4 pt-2">
-              <h3 className="text-lg font-heading font-medium text-neutral-dark">Game Settings</h3>
+            {/* Game Info */}
+            <div className="game-info space-y-4 pt-2">
+              <h3 className="text-lg font-heading font-medium text-neutral-dark">Game Info</h3>
               
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* Timer Setting */}
-                <div>
-                  <Label htmlFor="timer" className="block text-sm font-medium text-gray-700">
-                    Round Timer (seconds)
-                  </Label>
-                  <Select value={timerSeconds} onValueChange={setTimerSeconds}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select timer" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="30">30 seconds</SelectItem>
-                      <SelectItem value="45">45 seconds</SelectItem>
-                      <SelectItem value="60">60 seconds</SelectItem>
-                      <SelectItem value="90">90 seconds</SelectItem>
-                      <SelectItem value="120">120 seconds</SelectItem>
-                    </SelectContent>
-                  </Select>
+                <div className="bg-gray-50 p-3 rounded-md">
+                  <div className="text-sm font-medium text-gray-700">Round Timer</div>
+                  <div className="text-lg">{timerSeconds} seconds</div>
                 </div>
                 
-                {/* Rounds Setting */}
-                <div>
-                  <Label htmlFor="rounds" className="block text-sm font-medium text-gray-700">
-                    Number of Rounds
-                  </Label>
-                  <Select value={totalRounds} onValueChange={setTotalRounds}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select rounds" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="3">3 rounds</SelectItem>
-                      <SelectItem value="5">5 rounds</SelectItem>
-                      <SelectItem value="7">7 rounds</SelectItem>
-                      <SelectItem value="10">10 rounds</SelectItem>
-                    </SelectContent>
-                  </Select>
+                <div className="bg-gray-50 p-3 rounded-md">
+                  <div className="text-sm font-medium text-gray-700">Rounds</div>
+                  <div className="text-lg">{totalRounds} rounds</div>
                 </div>
               </div>
               
-              {/* Private Room Settings */}
-              <Accordion type="single" collapsible className="mt-6">
-                <AccordionItem value="private-room">
-                  <AccordionTrigger className="py-2">
-                    <div className="flex items-center gap-2">
-                      {isPrivateRoom ? <Lock className="h-4 w-4" /> : <LockOpen className="h-4 w-4" />}
-                      <span>Private Room Settings</span>
-                    </div>
-                  </AccordionTrigger>
-                  <AccordionContent>
-                    <div className="space-y-4 mt-2">
-                      <div className="flex items-center space-x-2">
-                        <Switch 
-                          id="private-room" 
-                          checked={isPrivateRoom}
-                          onCheckedChange={setIsPrivateRoom}
-                        />
-                        <Label htmlFor="private-room" className="cursor-pointer">
-                          {isPrivateRoom ? "Private Room (Password Protected)" : "Public Room (Anyone Can Join)"}
-                        </Label>
-                      </div>
-                      
-                      {isPrivateRoom && (
-                        <div className="space-y-4 mt-2 pt-2 border-t border-gray-100">
-                          <div className="space-y-2">
-                            <Label htmlFor="room-name">Room Name (Optional)</Label>
-                            <Input
-                              id="room-name"
-                              placeholder="My Awesome Game Room"
-                              value={roomName}
-                              onChange={(e) => setRoomName(e.target.value)}
-                            />
-                            <p className="text-xs text-gray-500">Give your room a name to make it easier to identify</p>
-                          </div>
-                          
-                          <div className="space-y-2">
-                            <Label htmlFor="room-password" className="flex items-center">
-                              Room Password
-                              <span className="text-red-500 ml-1">*</span>
-                            </Label>
-                            <Input
-                              id="room-password"
-                              type="password"
-                              placeholder="Enter a password"
-                              value={roomPassword}
-                              onChange={(e) => setRoomPassword(e.target.value)}
-                              required={isPrivateRoom}
-                            />
-                            <p className="text-xs text-gray-500">Share this password with people you want to invite</p>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </AccordionContent>
-                </AccordionItem>
-              </Accordion>
+              {/* Show room privacy info if it's private */}
+              {isPrivateRoom && (
+                <div className="bg-amber-50 p-3 rounded-md mt-2 border border-amber-100">
+                  <div className="flex items-center gap-2">
+                    <Lock className="h-4 w-4 text-amber-500" />
+                    <div className="text-sm font-medium text-amber-700">Private Room</div>
+                  </div>
+                  {roomName && (
+                    <div className="text-sm text-amber-700 mt-1">Name: {roomName}</div>
+                  )}
+                </div>
+              )}
             </div>
             
             {/* AI-Generated Image Preview */}

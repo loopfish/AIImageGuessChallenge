@@ -294,6 +294,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.send(renderFixedTestPage());
   });
 
+  // Get list of active games
+  app.get("/api/games", async (req, res) => {
+    try {
+      // Get all games in "lobby" status
+      const games = await storage.getActiveGames();
+      
+      // Filter out sensitive info
+      const filteredGames = games.map(game => ({
+        id: game.id,
+        code: game.code,
+        status: game.status,
+        roomName: game.roomName,
+        hasPassword: Boolean(game.roomPassword),
+        currentRound: game.currentRound,
+        totalRounds: game.totalRounds,
+        timerSeconds: game.timerSeconds,
+        createdAt: game.createdAt
+      }));
+      
+      res.json(filteredGames);
+    } catch (error) {
+      console.error("Error fetching active games:", error);
+      res.status(500).json({ message: "Failed to fetch active games" });
+    }
+  });
+
   // Test page for Gemini image generation
   app.get("/test-gemini-image", (req, res) => {
     res.send(`

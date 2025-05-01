@@ -21,7 +21,7 @@ import {
   guesses,
   roundResults
 } from "@shared/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, desc } from "drizzle-orm";
 
 export class DatabaseStorage implements IStorage {
   

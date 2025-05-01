@@ -16,6 +16,7 @@ export interface IStorage {
   getGameByCode(code: string): Promise<Game | undefined>;
   updateGame(id: number, game: Partial<Game>): Promise<Game>;
   resetAllActiveGames(): Promise<void>;
+  getActiveGames(): Promise<Game[]>;
   
   // Round methods
   createRound(round: InsertRound): Promise<Round>;
@@ -270,7 +271,9 @@ export class MemStorage implements IStorage {
       status: game.status || "lobby",
       currentRound: game.currentRound || 1,
       totalRounds: game.totalRounds || 5,
-      timerSeconds: game.timerSeconds || 60
+      timerSeconds: game.timerSeconds || 60,
+      roomName: game.roomName || null,
+      roomPassword: game.roomPassword || null
     };
     
     this.games.set(id, newGame);
@@ -340,6 +343,13 @@ export class MemStorage implements IStorage {
     await this.saveToDisk();
     
     console.log(`Reset ${activeGames.length} active games and all players`);
+  }
+  
+  async getActiveGames(): Promise<Game[]> {
+    // Return games in "lobby" status for room listing
+    return Array.from(this.games.values()).filter(
+      game => game.status === 'lobby'
+    );
   }
   
   // Round methods

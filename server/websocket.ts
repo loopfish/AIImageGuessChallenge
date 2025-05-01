@@ -247,7 +247,7 @@ async function handleCreateGame(
   storage: IStorage
 ) {
   try {
-    const { username, timerSeconds, totalRounds, sessionId } = message.payload;
+    const { username, timerSeconds, totalRounds, roomName, roomPassword, sessionId } = message.payload;
     
     // Create user if needed (or get existing)
     let user = await storage.getUserByUsername(username);
@@ -266,6 +266,8 @@ async function handleCreateGame(
       currentRound: 1,
       totalRounds,
       timerSeconds,
+      roomName: roomName || null,
+      roomPassword: roomPassword || null,
     });
     
     // Create player (the host)
@@ -310,12 +312,17 @@ async function handleJoinGame(
   storage: IStorage
 ) {
   try {
-    const { username, gameCode, sessionId } = message.payload;
+    const { username, gameCode, password, sessionId } = message.payload;
     
     // Find the game
     const game = await storage.getGameByCode(gameCode);
     if (!game) {
       return sendErrorToClient(clientId, "Game not found");
+    }
+    
+    // Check if game requires a password
+    if (game.roomPassword && (!password || password !== game.roomPassword)) {
+      return sendErrorToClient(clientId, "Incorrect password");
     }
     
     // Create user if needed (or get existing)

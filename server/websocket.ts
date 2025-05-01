@@ -32,6 +32,7 @@ interface ConnectedClient {
   socket: WebSocket;
   playerId?: number;
   gameId?: number;
+  sessionId?: string;     // Unique browser session identifier
   connectionTime?: number; // Timestamp of connection
   lastActive?: number;     // Timestamp of last activity
 }
@@ -97,7 +98,8 @@ export function setupWebsocketHandlers(wss: WebSocketServer, storage: IStorage) 
     clients.set(clientId, { 
       socket,
       connectionTime: Date.now(),
-      lastActive: Date.now()
+      lastActive: Date.now(),
+      // sessionId will be set when reconnection/heartbeat messages come in
     });
     console.log(`Total connected clients: ${clients.size}`);
     console.log(`Game rooms: ${gameClients.size}`);
@@ -1076,9 +1078,10 @@ async function handlePlayerReconnect(clientId: string, payload: any, storage: IS
     let playerId = payload.playerId;
     const gameCode = payload.gameCode;
     const username = payload.username;
+    const sessionId = payload.sessionId;
     
     // Log to make debugging easier
-    console.log(`Reconnection data: gameId=${gameId}, playerId=${playerId}, gameCode=${gameCode}, username=${username}`);
+    console.log(`Reconnection data: gameId=${gameId}, playerId=${playerId}, gameCode=${gameCode}, username=${username}, sessionId=${sessionId}`);
     
     // Prioritize game code for reconnection as it's most reliable across devices
     if (gameCode) {
@@ -1319,7 +1322,7 @@ function findClientIdByPlayerId(playerId: number): string | undefined {
 
 // Handle heartbeat messages from clients
 function handleHeartbeat(clientId: string, message: HeartbeatMessage) {
-  const { playerId, gameId, timestamp } = message.payload;
+  const { playerId, gameId, timestamp, sessionId } = message.payload;
   const client = clients.get(clientId);
   
   if (!client) {
@@ -1333,6 +1336,7 @@ function handleHeartbeat(clientId: string, message: HeartbeatMessage) {
   // Update client's player and game IDs if they're not set
   if (!client.playerId) client.playerId = playerId;
   if (!client.gameId) client.gameId = gameId;
+  if (sessionId) client.sessionId = sessionId; // Store the sessionId
   
   // Add player to online players for this game
   let onlinePlayersForGame = onlinePlayers.get(gameId);

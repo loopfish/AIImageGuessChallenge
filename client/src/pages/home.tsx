@@ -326,17 +326,6 @@ export default function Home() {
         <p className="text-lg text-gray-600">
           Challenge your friends to guess the prompts behind AI-generated images!
         </p>
-        <div className="mt-2 text-primary font-medium">
-          Playing as: {username} 
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={() => setHasEnteredName(false)}
-            className="ml-2 text-xs"
-          >
-            Change
-          </Button>
-        </div>
       </div>
       
       <Tabs defaultValue="createRoom" className="w-full" onValueChange={setActiveTab}>

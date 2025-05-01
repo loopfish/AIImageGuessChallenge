@@ -1,15 +1,16 @@
 import { useState, useEffect } from "react";
-import { UserRound, Pencil, X } from "lucide-react";
+import { UserRound, Pencil, X, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useGameContext } from "@/hooks/use-game";
+import { useLocation } from "wouter";
 
 export default function PlayerBanner() {
-  const { gameState } = useGameContext();
+  const { gameState, setGameState } = useGameContext();
   const [username, setUsername] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [, navigate] = useLocation();
   
   // Generate a unique key for this browser tab to prevent conflicts between tabs
   const [sessionKey] = useState(() => {
@@ -64,6 +65,23 @@ export default function PlayerBanner() {
     setIsDialogOpen(false);
   };
   
+  // Handle logout - reset game state and navigate to home
+  const handleLogout = () => {
+    try {
+      // Clear only the username, not the session ID
+      localStorage.removeItem(playerNameKey);
+      localStorage.removeItem('playerName');
+    } catch (error) {
+      // Silent fail on localStorage errors
+    }
+    
+    // Reset game state
+    setGameState(null);
+    
+    // Navigate to home page
+    navigate('/');
+  };
+  
   // Get initials for avatar
   const getInitials = (name: string) => {
     if (!name) return "?";
@@ -97,33 +115,48 @@ export default function PlayerBanner() {
   };
   
   return (
-    <div className="player-banner">
-      {username ? (
-        // If username exists, show the player info as a simple name with status
-        <div className="group flex flex-col">
-          <div className="flex items-center gap-1">
-            <span className="font-medium text-sm">{username}</span>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="h-5 w-5 rounded-full text-white/70 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity"
-              onClick={() => setIsDialogOpen(true)}
-            >
-              <Pencil className="h-3 w-3" />
-            </Button>
+    <div className="player-banner flex items-center justify-between w-full">
+      <div>
+        {username ? (
+          // If username exists, show the player info as a simple name with status
+          <div className="group flex flex-col">
+            <div className="flex items-center gap-1">
+              <span className="font-medium text-sm">{username}</span>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-5 w-5 rounded-full text-white/70 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                onClick={() => setIsDialogOpen(true)}
+              >
+                <Pencil className="h-3 w-3" />
+              </Button>
+            </div>
+            
+            {gameState?.currentPlayerId && (
+              <span className="text-[10px] text-white/75 leading-tight">
+                {gameState.game?.status === "playing" ? "Playing" : "In lobby"}
+              </span>
+            )}
           </div>
-          
-          {gameState?.currentPlayerId && (
-            <span className="text-[10px] text-white/75 leading-tight">
-              {gameState.game?.status === "playing" ? "Playing" : "In lobby"}
-            </span>
-          )}
-        </div>
-      ) : (
-        // If no username, show a button to set one
-        <Button size="sm" className="gap-2" onClick={() => setIsDialogOpen(true)}>
-          <UserRound className="h-4 w-4" />
-          Set Your Name
+        ) : (
+          // If no username, show a button to set one
+          <Button size="sm" className="gap-2" onClick={() => setIsDialogOpen(true)}>
+            <UserRound className="h-4 w-4" />
+            Set Your Name
+          </Button>
+        )}
+      </div>
+      
+      {/* Logout button - only show if username exists */}
+      {username && (
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          className="text-white/70 hover:text-white"
+          onClick={handleLogout}
+        >
+          <LogOut className="h-4 w-4 mr-1" />
+          Logout
         </Button>
       )}
       

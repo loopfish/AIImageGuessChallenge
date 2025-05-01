@@ -99,32 +99,25 @@ export default function PlayerBanner() {
   return (
     <div className="player-banner">
       {username ? (
-        // If username exists, show the player info with Drawasaurus-style
-        <div className="flex items-center gap-2">
-          <div className="relative group">
-            <Avatar className={`h-8 w-8 ${getAvatarColor(username)}`}>
-              <AvatarFallback>{getInitials(username)}</AvatarFallback>
-            </Avatar>
-            
-            {/* Edit button */}
+        // If username exists, show the player info as a simple name with status
+        <div className="group flex flex-col">
+          <div className="flex items-center gap-1">
+            <span className="font-medium text-sm">{username}</span>
             <Button 
               variant="ghost" 
               size="icon" 
-              className="h-5 w-5 absolute -top-2 -right-2 rounded-full bg-white shadow-sm text-primary opacity-0 group-hover:opacity-100 transition-opacity"
+              className="h-5 w-5 rounded-full text-white/70 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity"
               onClick={() => setIsDialogOpen(true)}
             >
               <Pencil className="h-3 w-3" />
             </Button>
           </div>
           
-          <div className="flex flex-col">
-            <span className="font-medium text-xs leading-tight">{username}</span>
-            {gameState?.currentPlayerId && (
-              <span className="text-[10px] text-white/75 leading-tight">
-                {gameState.game?.status === "playing" ? "Playing" : "In lobby"}
-              </span>
-            )}
-          </div>
+          {gameState?.currentPlayerId && (
+            <span className="text-[10px] text-white/75 leading-tight">
+              {gameState.game?.status === "playing" ? "Playing" : "In lobby"}
+            </span>
+          )}
         </div>
       ) : (
         // If no username, show a button to set one

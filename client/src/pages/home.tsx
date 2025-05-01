@@ -12,6 +12,14 @@ import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/card"
 import { Label } from "@/components/ui/label";
 import { useQuery } from '@tanstack/react-query';
 import { GameLobbyList } from "@/components/game/GameLobbyList";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 export default function Home() {
   const [, navigate] = useLocation();
@@ -32,6 +40,10 @@ export default function Home() {
   const [gameCode, setGameCode] = useState("");
   const [gamePassword, setGamePassword] = useState("");
   const [activeTab, setActiveTab] = useState("createRoom");
+  
+  // Password dialog state
+  const [showPasswordDialog, setShowPasswordDialog] = useState(false);
+  const [selectedGame, setSelectedGame] = useState<GameLobby | null>(null);
   
   // Define the GameLobby type
   interface GameLobby {
@@ -258,18 +270,16 @@ export default function Home() {
         currentSocket = await connectWebSocket();
       }
       
-      // Check if this game needs a password by looking in the game list
-      const selectedGame = lobbies?.find(game => game.code === gameCode);
+      // Check if this game needs a password using the local state or looking in the game list
+      const gameToJoin = selectedGame || lobbies?.find(game => game.code === gameCode);
       
-      // If the game has a password and we don't have one provided, notify the user
-      if (selectedGame?.hasPassword && !gamePassword.trim()) {
-        toast({
-          title: "Password Required",
-          description: "This room is password protected. Please enter the password.",
-          variant: "destructive"
-        });
-        // Focus on the password field
-        document.getElementById('game-password')?.focus();
+      // If the game has a password and we don't have one provided, show the password dialog
+      if (gameToJoin?.hasPassword && !gamePassword.trim()) {
+        if (!selectedGame) {
+          // Only set selectedGame if not already set (prevents infinite loop)
+          setSelectedGame(gameToJoin);
+          setShowPasswordDialog(true);
+        }
         setIsJoining(false);
         return;
       }
@@ -284,6 +294,10 @@ export default function Home() {
           sessionId: generateSessionId() // Generate a unique session ID for this tab
         }
       }));
+      
+      // Reset state
+      setSelectedGame(null);
+      setGamePassword("");
       
       // Navigate to game page, the join logic is handled in the GamePage component
       navigate(`/game/${gameCode}`);
@@ -534,8 +548,10 @@ export default function Home() {
                             onClick={() => {
                               setGameCode(game.code);
                               if (game.hasPassword) {
-                                // Focus on password field if needed
-                                document.getElementById('game-password')?.focus();
+                                // Show password dialog for protected rooms
+                                setSelectedGame(game);
+                                setShowPasswordDialog(true);
+                                setGamePassword(""); // Reset password field
                               } else {
                                 // Direct join if no password
                                 handleJoinGame();
@@ -564,6 +580,52 @@ export default function Home() {
           <li>The player with the most points at the end wins!</li>
         </ol>
       </div>
+      
+      {/* Password dialog for protected rooms */}
+      <Dialog open={showPasswordDialog} onOpenChange={setShowPasswordDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Enter Room Password</DialogTitle>
+            <DialogDescription>
+              {selectedGame?.roomName || `Game #${selectedGame?.id}`} is password protected. 
+              Please enter the password to join.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="py-4">
+            <Label htmlFor="room-password">Password</Label>
+            <Input
+              id="room-password"
+              type="password"
+              value={gamePassword}
+              onChange={(e) => setGamePassword(e.target.value)}
+              placeholder="Enter room password"
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && gamePassword.trim()) {
+                  setShowPasswordDialog(false);
+                  handleJoinGame();
+                }
+              }}
+            />
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowPasswordDialog(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={() => {
+                setShowPasswordDialog(false);
+                handleJoinGame();
+              }} 
+              disabled={!gamePassword}
+            >
+              {isJoining ? 'Joining...' : 'Join Game'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -171,6 +171,7 @@ export interface CreateGameMessage extends WebSocketMessage {
     username: string;
     timerSeconds: number;
     totalRounds: number;
+    sessionId?: string; // Optional session ID for unique browser tab identification
   };
 }
 
@@ -189,6 +190,7 @@ export interface StartGameMessage extends WebSocketMessage {
     gameId: number;
     prompt: string;
     imageUrl?: string; // Optional pre-generated image URL
+    sessionId?: string; // Optional session ID for host identification
   };
 }
 
@@ -202,6 +204,7 @@ export interface SubmitGuessMessage extends WebSocketMessage {
     clientId?: string; // Optional client ID to help with player attribution
     username?: string; // Optional username for additional player identification
     gameCode?: string; // Optional game code for better context
+    sessionId?: string; // Optional session ID for precise browser tab identification
   };
 }
 
@@ -210,6 +213,7 @@ export interface NextRoundMessage extends WebSocketMessage {
   payload: {
     gameId: number;
     prompt: string;
+    sessionId?: string; // Optional session ID for unique browser tab identification
   };
 }
 

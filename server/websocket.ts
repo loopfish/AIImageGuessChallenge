@@ -133,6 +133,18 @@ export function setupWebsocketHandlers(wss: WebSocketServer, storage: IStorage) 
           parsedMessage.clientId = clientId;
         }
         
+        // Extract sessionId from payload if present and update client record
+        if (client && parsedMessage.payload && typeof parsedMessage.payload === 'object') {
+          // If sessionId is in the payload, store it with the client
+          if ('sessionId' in parsedMessage.payload && 
+              parsedMessage.payload.sessionId && 
+              typeof parsedMessage.payload.sessionId === 'string') {
+            const sessionId = parsedMessage.payload.sessionId;
+            client.sessionId = sessionId;
+            console.log(`Updated sessionId for client ${clientId}: ${sessionId}`);
+          }
+        }
+        
         console.log(`Received message type: ${parsedMessage.type}`);
         
         // Debug special message types more verbosely
@@ -235,7 +247,7 @@ async function handleCreateGame(
   storage: IStorage
 ) {
   try {
-    const { username, timerSeconds, totalRounds } = message.payload;
+    const { username, timerSeconds, totalRounds, sessionId } = message.payload;
     
     // Create user if needed (or get existing)
     let user = await storage.getUserByUsername(username);

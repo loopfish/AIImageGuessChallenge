@@ -131,13 +131,60 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  async deleteGame(id: number): Promise<boolean> {
+    try {
+      console.log(`Attempting to delete game with ID: ${id}`);
+      
+      // Find all rounds for this game
+      const gameRounds = await db
+        .select()
+        .from(rounds)
+        .where(eq(rounds.gameId, id));
+      
+      // For each round, delete associated guesses and round results
+      for (const round of gameRounds) {
+        // Delete guesses
+        await db
+          .delete(guesses)
+          .where(eq(guesses.roundId, round.id));
+        
+        // Delete round results
+        await db
+          .delete(roundResults)
+          .where(eq(roundResults.roundId, round.id));
+      }
+      
+      // Delete all rounds
+      await db
+        .delete(rounds)
+        .where(eq(rounds.gameId, id));
+      
+      // Delete all players
+      await db
+        .delete(players)
+        .where(eq(players.gameId, id));
+      
+      // Finally delete the game
+      const result = await db
+        .delete(games)
+        .where(eq(games.id, id));
+      
+      console.log(`Successfully deleted game with ID: ${id}`);
+      return true;
+    } catch (error) {
+      console.error(`Error deleting game with ID: ${id}`, error);
+      return false;
+    }
+  }
+  
   async getActiveGames(): Promise<Game[]> {
     try {
-      // Get all games in "lobby" status for room listing
+      // Get all games in "lobby" status for room listing, sorted by creation date (newest first)
       const activeGames = await db
         .select()
         .from(games)
-        .where(eq(games.status, 'lobby'));
+        .where(eq(games.status, 'lobby'))
+        .orderBy(games.createdAt, 'desc'); // Order by creation date, newest first
       
       return activeGames;
     } catch (error) {

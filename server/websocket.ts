@@ -177,6 +177,10 @@ export function setupWebsocketHandlers(wss: WebSocketServer, storage: IStorage) 
             await handleEndGame(parsedMessage.payload.gameId, storage);
             break;
             
+          case GameMessageType.DELETE_GAME:
+            await handleDeleteGame(parsedMessage.payload.gameId, parsedMessage.payload.sessionId, clientId, storage);
+            break;
+            
           // Handle player reconnection request
           case GameMessageType.RECONNECT_REQUEST:
             await handlePlayerReconnect(clientId, parsedMessage.payload, storage);

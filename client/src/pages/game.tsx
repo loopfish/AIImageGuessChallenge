@@ -49,19 +49,19 @@ export default function Game() {
               currentPlayerId = parsedId;
             }
           }
-        } catch (err) {
-          console.error("Error getting player ID:", err);
-        }
-        
-        // Default to first player if needed
-        if (currentPlayerId === null && data.players && data.players.length > 0) {
-          currentPlayerId = data.players[0]?.id ?? null;
-          if (currentPlayerId !== null) {
-            try {
+          
+          // Default to first player if needed
+          if (currentPlayerId === null && data.players && data.players.length > 0) {
+            currentPlayerId = data.players[0]?.id ?? null;
+            if (currentPlayerId !== null) {
               localStorage.setItem('currentPlayerId', currentPlayerId.toString());
-            } catch (err) {
-              console.error("Error saving player ID:", err);
             }
+          }
+        } catch (err) {
+          // Silent handling for localStorage errors
+          // Default to first player if available
+          if (data.players && data.players.length > 0) {
+            currentPlayerId = data.players[0]?.id ?? null;
           }
         }
         
@@ -72,7 +72,6 @@ export default function Game() {
         });
       }
     } catch (err: any) {
-      console.error("Error fetching game:", err);
       setError(err.message);
       
       // Show error toast
@@ -109,7 +108,7 @@ export default function Game() {
           socketRef.current.close();
         }
       } catch (e) {
-        console.error("Error closing existing socket:", e);
+        // Silent handling for socket closing errors
       }
     }
     
@@ -118,11 +117,8 @@ export default function Game() {
     const host = window.location.host;
     const wsUrl = `${protocol}//${host}/ws`;
     
-    console.log("Connecting to WebSocket at:", wsUrl);
-    
     // Set a connection timeout
     const connectionTimeout = setTimeout(() => {
-      console.error("WebSocket connection timeout");
       setError("Connection timeout. Please refresh the page.");
       setIsLoading(false);
     }, 5000);
@@ -136,7 +132,6 @@ export default function Game() {
       
       // WebSocket event handlers
       socket.onopen = () => {
-        console.log("WebSocket connected");
         setHasConnected(true);
         clearTimeout(connectionTimeout);
         
@@ -151,18 +146,14 @@ export default function Game() {
       socket.onmessage = (event) => {
         try {
           const message: WebSocketMessage = JSON.parse(event.data);
-          console.log("Received WebSocket message:", message.type);
-          
           // Handle different types of WebSocket messages
           handleWebSocketMessage(message);
         } catch (err) {
-          console.error("Error handling WebSocket message:", err);
+          // Silent error handling in production
         }
       };
       
       socket.onclose = (event) => {
-        console.log("WebSocket disconnected", event.code, event.reason);
-        
         // Only attempt reconnection if there was a connection issue, not if it was closed intentionally
         if (event.code !== 1000) {
           // Store current game state to maintain continuity
@@ -170,7 +161,6 @@ export default function Game() {
           
           // Attempt to reconnect after a short delay
           setTimeout(() => {
-            console.log("Attempting to reconnect to WebSocket...");
             if (socketRef.current?.readyState !== WebSocket.OPEN) {
               // Force recreation of the connection
               socketRef.current = null;
@@ -185,8 +175,6 @@ export default function Game() {
                 socketRef.current = newSocket;
                 
                 newSocket.onopen = () => {
-                  console.log("WebSocket reconnected successfully");
-                  
                   // If we have a game code, re-fetch game data to restore state
                   if (code && code !== 'lobby') {
                     fetchGameData(code);
@@ -198,7 +186,6 @@ export default function Game() {
                 newSocket.onclose = socket.onclose;
                 newSocket.onerror = socket.onerror;
               } catch (err) {
-                console.error("Failed to reconnect to WebSocket:", err);
                 setError("Connection lost. Please refresh the page.");
               }
             }
@@ -206,8 +193,7 @@ export default function Game() {
         }
       };
       
-      socket.onerror = (error) => {
-        console.error("WebSocket error occurred:", error);
+      socket.onerror = () => {
         setError("Failed to connect to game server. Please try refreshing the page.");
         setIsLoading(false);
       };
@@ -219,7 +205,6 @@ export default function Game() {
         }
       };
     } catch (err) {
-      console.error("Failed to create WebSocket:", err);
       setError("Failed to connect to game server");
       setIsLoading(false);
     }
@@ -245,20 +230,18 @@ export default function Game() {
                 currentPlayerId = parsedId;
               }
             }
-          } catch (err) {
-            console.error("Error getting player ID:", err);
-          }
-          
-          // Default to first player if needed
-          if (currentPlayerId === null) {
-            currentPlayerId = gameData.players[0]?.id ?? null;
-            if (currentPlayerId !== null) {
-              try {
+            
+            // Default to first player if needed
+            if (currentPlayerId === null) {
+              currentPlayerId = gameData.players[0]?.id ?? null;
+              if (currentPlayerId !== null) {
                 localStorage.setItem('currentPlayerId', currentPlayerId.toString());
-              } catch (err) {
-                console.error("Error saving player ID:", err);
               }
             }
+          } catch (err) {
+            // Silent handling for localStorage errors
+            // Default to first player
+            currentPlayerId = gameData.players[0]?.id ?? null;
           }
           
           // Add to game state
@@ -382,12 +365,7 @@ export default function Game() {
     }
   };
   
-  // Debug information
-  console.log("Game page rendering with renderGameView", {
-    hasGameState: Boolean(gameState),
-    isLoading,
-    error
-  });
+  // Game page rendering with game state
 
   // Always wrap content in GameLayout to ensure consistent connection info display
   return (

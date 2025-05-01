@@ -275,6 +275,26 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
           }, 1000);
           break;
           
+        case GameMessageType.DELETE_GAME:
+          // Game has been deleted by the host
+          console.log("Game delete notification received:", message.payload.message);
+          
+          // Show toast message to inform the user
+          toast({
+            title: "Game Deleted",
+            description: message.payload.message || "This game has been deleted by the host.",
+            variant: "default",
+          });
+          
+          // Reset the game state
+          setGameState(null);
+          
+          // Navigate to home page after a brief delay
+          setTimeout(() => {
+            window.location.href = "/";
+          }, 1000);
+          break;
+          
         case GameMessageType.SERVER_RESTART:
           // Server is restarting, show toast and redirect all clients to home page
           console.log("Server restart notification received:", message.payload.message);

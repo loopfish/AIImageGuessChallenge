@@ -76,7 +76,7 @@ export default function Header() {
           <h1 className="text-2xl font-heading font-bold">Prompt Guesser</h1>
         </div>
         
-        <div className="flex items-center gap-8">
+        <div className="flex items-center gap-6">
           <nav className="hidden md:block">
             <ul className="flex space-x-6">
               <li>
@@ -90,7 +90,7 @@ export default function Header() {
               <li>
                 <Link 
                   href="/how-to-play" 
-                  className={`hover:text-accent transition-colors duration-200 ${location === "/how-to-play" ? "text-accent" : ""}`}
+                  className={`hover:text-accent transition-colors duration-200 whitespace-nowrap ${location === "/how-to-play" ? "text-accent" : ""}`}
                 >
                   How to Play
                 </Link>
@@ -107,36 +107,34 @@ export default function Header() {
           </nav>
           
           {/* Player Banner */}
-          <div className="bg-primary-foreground/10 py-1 px-3 rounded-full flex items-center justify-between w-full max-w-xs">
-            <div>
-              {username ? (
-                <div className="flex flex-col">
-                  <div className="flex items-center gap-1">
-                    <span className="font-medium text-sm">{username}</span>
-                  </div>
-                  
-                  {gameState?.currentPlayerId && (
-                    <span className="text-[10px] text-white/75 leading-tight">
-                      {gameState.game?.status === "playing" ? "Playing" : "In lobby"}
-                    </span>
-                  )}
+          <div className="bg-primary-foreground/10 py-1 px-3 rounded-full flex items-center w-full max-w-[180px]">
+            {username ? (
+              <div className="flex flex-col w-full">
+                <div className="flex items-center gap-1">
+                  <span className="font-medium text-sm">{username}</span>
                 </div>
-              ) : (
-                <div></div>
-              )}
-            </div>
-            
-            {/* Logout button - only show if username exists */}
-            {username && (
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="text-white/70 hover:text-white"
-                onClick={handleLogout}
-              >
-                <LogOut className="h-4 w-4 mr-1" />
-                Logout
-              </Button>
+                
+                {gameState?.currentPlayerId && (
+                  <span className="text-[10px] text-white/75 leading-tight">
+                    {gameState.game?.status === "playing" ? "Playing" : "In lobby"}
+                  </span>
+                )}
+                
+                {/* Logout button moved under player name */}
+                <div className="mt-1">
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="text-white/70 hover:text-white p-0 h-6"
+                    onClick={handleLogout}
+                  >
+                    <LogOut className="h-3 w-3 mr-1" />
+                    <span className="text-xs">Logout</span>
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div></div>
             )}
           </div>
         </div>

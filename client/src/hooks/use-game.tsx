@@ -26,6 +26,8 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [clientId, setClientId] = useState<string | null>(null);
+  // Generate unique session ID for this browser tab/window to distinguish multiple players
+  const [sessionId] = useState(() => `session_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`);
   const [location] = useLocation();
   const { toast } = useToast();
   
@@ -50,19 +52,21 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     return urlParts[urlParts.length - 1];
   }, [location]);
   
-  // Local storage helpers
+  // Local storage helpers with session-specific keys for multiple players on same device
   const saveCurrentPlayerToStorage = useCallback((playerId: number) => {
     try {
-      localStorage.setItem('currentPlayerId', playerId.toString());
-      console.log(`Saved player ID: ${playerId}`);
+      // Use sessionId as part of the key to make it unique per browser tab/window
+      localStorage.setItem(`player_${sessionId}`, playerId.toString());
+      console.log(`Saved player ID ${playerId} for session ${sessionId}`);
     } catch (error) {
       console.error("Error saving to storage:", error);
     }
-  }, []);
+  }, [sessionId]);
 
   const getCurrentPlayerFromStorage = useCallback((): number | null => {
     try {
-      const savedId = localStorage.getItem('currentPlayerId');
+      // Use sessionId to get this specific session's player ID
+      const savedId = localStorage.getItem(`player_${sessionId}`);
       if (savedId) {
         return parseInt(savedId, 10);
       }
@@ -70,7 +74,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
       console.error("Error reading from storage:", error);
     }
     return null;
-  }, []);
+  }, [sessionId]);
   
   // WebSocket message handler
   const handleWebSocketMessage = useCallback((event: MessageEvent) => {
